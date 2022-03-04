@@ -61,6 +61,7 @@ const Cell = ({ x, y, type }) => {
 const getRandomCell = () => ({
   x: Math.floor(Math.random() * Config.width),
   y: Math.floor(Math.random() * Config.width),
+  createdAt: Date.now()
 });
 
 const Snake = () => {
@@ -73,18 +74,31 @@ const Snake = () => {
 
   // snake[0] is head and snake[snake.length - 1] is tail
   const [snake, setSnake] = useState(getDefaultSnake());
-  const [direction, setDirection] = useState(Direction.Right);
-
-  const [food, setFood] = useState({ x: 4, y: 10 });
+  const [direction, setDirection] = useState(() => Direction.Right);
+  //const time = new Date();
+  const foodArray = [{ x: 4, y: 10, createdAt: Date.now() }];
+  const [food, setFood] = useState(foodArray);
   const [score, setScore] = useState(0);
-
   // move the snake
   useEffect(() => {
     const runSingleStep = () => {
       setSnake((snake) => {
         const head = snake[0];
         const newHead = { x: head.x + direction.x, y: head.y + direction.y };
-
+        if (newHead.y < 0)
+          newHead.y = 24;
+        else if (newHead.y > 24)
+          newHead.y = 0;
+        else if (newHead.x < 0)
+          newHead.x = 24;
+        else if (newHead.x > 24)
+          newHead.x = 0;
+        if (isSnake(newHead)) {
+          setSnake(() => getDefaultSnake());
+          setDirection(() => Direction.Right);
+          setFood([{ x: 4, y: 10, createdAt: Date.now() }]);
+          setScore(() => 0);
+        }
         // make a new snake by extending head
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
         const newSnake = [newHead, ...snake];
@@ -101,41 +115,111 @@ const Snake = () => {
 
     return () => clearInterval(timer);
   }, [direction, food]);
+  //update food
+  useEffect(() => {
+    const updateFood = () => {
+      setFood((food) => {
+        const foodCell = getRandomCell();
+        const newFood = [...food, foodCell];
+        return newFood;
+      });
+    };
+    const timer = setInterval(updateFood, 3000);
+    return () => clearInterval(timer);
+  }, [])
+  useEffect(() => {
+    const updateFood = () => {
+      setFood((food) => {
+        const newFood = food.filter(f => Math.floor((Date.now() - f.createdAt) / 1000) < 10.00)
+        return newFood;
+      });
+    };
+    updateFood();
+    const timer = setInterval(updateFood, 500);
+    return () => clearInterval(timer);
+  }, [])
 
   // update score whenever head touches a food
   useEffect(() => {
     const head = snake[0];
     if (isFood(head)) {
+      const prevFood = food.filter(f => f.x != head.x && f.y != head.y)
       setScore((score) => {
         return score + 1;
       });
+      setSnake((snake) => {
+        const newHead = { x: head.x + direction.x, y: head.y + direction.y };
+        if (newHead.y < 0)
+          newHead.y = 24;
+        else if (newHead.y > 24)
+          newHead.y = 0;
+        else if (newHead.x < 0)
+          newHead.x = 24;
+        else if (newHead.x > 24)
+          newHead.x = 0;
+        if (isSnake(newHead)) {
+          setSnake(() => getDefaultSnake());
+          setDirection(() => Direction.Right);
+          setFood([{ x: 4, y: 10, createdAt: Date.now() }]);
+          setScore(() => 0);
+        }
+        else {
+          let newFood = getRandomCell();
+          while (isSnake(newFood)) {
+            newFood = getRandomCell();
+          }
+          setFood([...prevFood, newFood]);
+        }
+        const newSnake = [newHead, ...snake];
+        return newSnake;
+      });
 
-      let newFood = getRandomCell();
-      while (isSnake(newFood)) {
-        newFood = getRandomCell();
-      }
 
-      setFood(newFood);
     }
+
+
   }, [snake]);
 
   useEffect(() => {
     const handleNavigation = (event) => {
-      switch (event.key) {
-        case "ArrowUp":
-          setDirection(Direction.Top);
-          break;
 
-        case "ArrowDown":
-          setDirection(Direction.Bottom);
+      switch (event.key) {
+        case "ArrowRight":
+          setDirection((prevDirection) => {
+            if (prevDirection.x == -1 && prevDirection.y == 0)
+              return Direction.Left;
+            else
+              return Direction.Right;
+          });
           break;
 
         case "ArrowLeft":
-          setDirection(Direction.Left);
+          setDirection((prevDirection) => {
+            if (prevDirection.x == 1 && prevDirection.y == 0)
+              return Direction.Right;
+            else
+              return Direction.Left;
+          });
           break;
 
-        case "ArrowRight":
-          setDirection(Direction.Right);
+
+        case "ArrowUp":
+          setDirection((prevDirection) => {
+            if (prevDirection.x == 0 && prevDirection.y == 1)
+              return Direction.Bottom;
+            else
+              return Direction.Top;
+          });
+          break;
+
+        case "ArrowDown":
+
+          setDirection((prevDirection) => {
+            if (prevDirection.x == 0 && prevDirection.y == -1)
+              return Direction.Top;
+            else
+              return Direction.Bottom;
+          });
           break;
       }
     };
@@ -146,7 +230,8 @@ const Snake = () => {
 
   // ?. is called optional chaining
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
-  const isFood = ({ x, y }) => food?.x === x && food?.y === y;
+  const isFood = ({ x, y }) =>
+    food.find((position) => position.x === x && position.y === y);
 
   const isSnake = ({ x, y }) =>
     snake.find((position) => position.x === x && position.y === y);
