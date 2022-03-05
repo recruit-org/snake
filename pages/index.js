@@ -69,7 +69,7 @@ const Snake = () => {
     { x: 7, y: 12 },
     { x: 6, y: 12 },
   ];
-  const grid = useRef();
+  // const grid = useRef();
 
   // snake[0] is head and snake[snake.length - 1] is tail
   const [snake, setSnake] = useState(getDefaultSnake());
@@ -77,20 +77,41 @@ const Snake = () => {
 
   const [food, setFood] = useState({ x: 4, y: 10 });
   const [score, setScore] = useState(0);
+  const [endGame, setEndGame] = useState(false);
+
+  // restart the game
+  const reStartGame = () => {
+    setSnake(getDefaultSnake());
+    setDirection(Direction.Right);
+  };
 
   // move the snake
   useEffect(() => {
     const runSingleStep = () => {
       setSnake((snake) => {
         const head = snake[0];
-        const newHead = { x: head.x + direction.x, y: head.y + direction.y };
+        const newHead = {
+          x: (head.x + direction.x + Config.width) % Config.width,
+          y: (head.y + direction.y + Config.height) % Config.height,
+        };
 
         // make a new snake by extending head
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
         const newSnake = [newHead, ...snake];
 
         // remove tail
-        newSnake.pop();
+        if (!isFood(newHead)) {
+          newSnake.pop();
+        }
+        if (isSnake(newHead)) {
+          setEndGame(true);
+
+          setTimeout(() => {
+            reStartGame();
+            setEndGame(false);
+            setScore(0)
+          }, 5000);
+        }
 
         return newSnake;
       });
@@ -179,7 +200,17 @@ const Snake = () => {
           width: Config.width * Config.cellSize,
         }}
       >
-        {cells}
+        {/* {cells} */}
+        <div style={{ textAlign: "center", fontSize: "30px" }}>
+          {endGame ? (
+            <>
+              <h5>Game Over</h5>
+              <h5>your score is: {score}</h5>
+            </>
+          ) : (
+            cells
+          )}
+        </div>
       </div>
     </div>
   );
