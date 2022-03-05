@@ -113,6 +113,8 @@ const useSnake = () => {
 
     return () => clearInterval(timer);
   }, [direction, foods]);
+
+  //helper function for adding new food
   const addNewFood = () => {
     let newFood = getRandomCell();
     while (isSnake(newFood)) {
@@ -121,6 +123,8 @@ const useSnake = () => {
 
     setFoods((fs) => [...fs, newFood]);
   };
+
+  //helper function for removing food
   const removeFood = () => {
     setFoods((fs) => fs.slice(1));
   };
