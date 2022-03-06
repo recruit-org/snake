@@ -114,7 +114,7 @@ const Snake = () => {
       while (isSnake(newFood)) {
         newFood = getRandomCell();
       }
-
+      snake.push(snake[0]);
       setFood(newFood);
     }
   }, [snake]);
