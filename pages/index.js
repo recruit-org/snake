@@ -15,10 +15,10 @@ const CellType = {
 };
 
 const Direction = {
-  Left: { x: -1, y: 0},
-  Right: { x: 1, y: 0},
-  Top: { x: 0, y: -1},
-  Bottom: { x: 0, y: 1},
+  Left: { x: -1, y: 0 },
+  Right: { x: 1, y: 0 },
+  Top: { x: 0, y: -1 },
+  Bottom: { x: 0, y: 1 },
 };
 
 const Cell = ({ x, y, type }) => {
