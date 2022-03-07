@@ -91,7 +91,7 @@ const Snake = () => {
 
         // remove tail
         if(!isFood(newHead)){
-          newSnake.pop();
+          newSnake.pop(); // comment
         }
 
         return newSnake;
