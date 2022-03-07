@@ -1,7 +1,6 @@
 import dynamic from "next/dynamic";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import styles from "../styles/Snake.module.css";
-import { isReturnStatement } from "@babel/types";
 
 const Config = {
   height: 25,
@@ -16,10 +15,10 @@ const CellType = {
 };
 
 const Direction = {
-  Left: { x: -1, y: 0, str:"L" },
-  Right: { x: 1, y: 0, str:"R" },
-  Top: { x: 0, y: -1, str:"T" },
-  Bottom: { x: 0, y: 1, str:"B" },
+  Left: { x: -1, y: 0},
+  Right: { x: 1, y: 0},
+  Top: { x: 0, y: -1},
+  Bottom: { x: 0, y: 1},
 };
 
 const Cell = ({ x, y, type }) => {
