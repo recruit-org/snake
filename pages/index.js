@@ -89,8 +89,11 @@ const Snake = () => {
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
         const newSnake = [newHead, ...snake];
 
-        // remove tail
-        newSnake.pop();
+        // increase snake size after eating food
+        if (isFood(newHead)) {
+          // remove tail
+          newSnake.pop();
+        }
 
         return newSnake;
       });
