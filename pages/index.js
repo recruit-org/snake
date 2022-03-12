@@ -63,7 +63,9 @@ const getRandomCell = () => ({
   y: Math.floor(Math.random() * Config.width),
 });
 
-const Snake = () => {
+//custom hook
+//controller
+const UseSnake = () => {
   const getDefaultSnake = () => [
     { x: 8, y: 12 },
     { x: 7, y: 12 },
@@ -75,67 +77,109 @@ const Snake = () => {
   const [snake, setSnake] = useState(getDefaultSnake());
   const [direction, setDirection] = useState(Direction.Right);
 
-  const [food, setFood] = useState({ x: 4, y: 10 });
-  const [score, setScore] = useState(0);
+  const [foods, setFoods] = useState([{ x: 4, y: 10 }]);
+  const score = snake.length-3;
 
+  const resetGame = () => {
+    setSnake(getDefaultSnake())
+    setDirection(Direction.Right)
+    setFoods([{ x: 4, y: 10 }])
+  }
   // move the snake
   useEffect(() => {
     const runSingleStep = () => {
       setSnake((snake) => {
         const head = snake[0];
-        const newHead = { x: head.x + direction.x, y: head.y + direction.y };
+        const newHead = { x: (head.x + direction.x + Config.width) % Config.width, 
+          y: (head.y + direction.y + Config.height) % Config.height };
 
         // make a new snake by extending head
-        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
         const newSnake = [newHead, ...snake];
 
-        // remove tail
-        newSnake.pop();
+        // remove tail when head doesnt eat food
+        if(!isFood(newHead)){
+          newSnake.pop();
+        }
+        if(isSnake(newHead)){
+          resetGame()
+        }
 
         return newSnake;
       });
     };
 
     runSingleStep();
-    const timer = setInterval(runSingleStep, 500);
+    const timer = setInterval(runSingleStep, 300);
 
     return () => clearInterval(timer);
-  }, [direction, food]);
+  }, [direction, foods]);
 
   // update score whenever head touches a food
   useEffect(() => {
     const head = snake[0];
     if (isFood(head)) {
-      setScore((score) => {
-        return score + 1;
-      });
 
       let newFood = getRandomCell();
       while (isSnake(newFood)) {
         newFood = getRandomCell();
       }
 
-      setFood(newFood);
+      setFoods(currentFoods => {
+        currentFoods.filter(food => food.x!==head.x && food.y!==head.y)
+        return [...currentFoods,newFood]//?
+      });
     }
   }, [snake]);
+
+  //food after 3s
+  useEffect(() => {
+    const interval = setInterval(()=> {
+      let newFood = getRandomCell();
+      while (isSnake(newFood) || isFood(newFood)) {
+        newFood = getRandomCell();
+      }
+    setFoods(currentFoods => [...currentFoods,newFood]);
+    },3000);
+
+    return ( () =>
+      clearInterval(interval)
+    )
+    
+  },[foods])
 
   useEffect(() => {
     const handleNavigation = (event) => {
       switch (event.key) {
         case "ArrowUp":
-          setDirection(Direction.Top);
+          setDirection((direction) =>{
+            if(direction!==Direction.Bottom)
+              return Direction.Top;
+            return direction;
+          })
           break;
 
         case "ArrowDown":
-          setDirection(Direction.Bottom);
+          setDirection((direction) =>{
+            if(direction!==Direction.Top)
+              return Direction.Bottom;
+            return direction;
+          })
           break;
 
         case "ArrowLeft":
-          setDirection(Direction.Left);
+          setDirection((direction) =>{
+            if(direction!==Direction.Right)
+              return Direction.Left;
+            return direction;
+          })
           break;
 
         case "ArrowRight":
-          setDirection(Direction.Right);
+          setDirection((direction) =>{
+            if(direction!==Direction.Left)
+              return Direction.Right;
+            return direction;
+          })
           break;
       }
     };
@@ -146,11 +190,19 @@ const Snake = () => {
 
   // ?. is called optional chaining
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
-  const isFood = ({ x, y }) => food?.x === x && food?.y === y;
+  const isFood = ({ x, y }) => 
+    foods.find((position)=> position.x === x && position.y === y);
 
   const isSnake = ({ x, y }) =>
     snake.find((position) => position.x === x && position.y === y);
 
+  
+  return {score,isFood, isSnake}
+}
+
+//view
+const Snake = () => {
+  const {score, isFood, isSnake} = UseSnake()
   const cells = [];
   for (let x = 0; x < Config.width; x++) {
     for (let y = 0; y < Config.height; y++) {
