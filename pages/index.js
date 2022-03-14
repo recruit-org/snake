@@ -112,22 +112,15 @@ const UseSnake = () => {
     const timer = setInterval(runSingleStep, 300);
 
     return () => clearInterval(timer);
-  }, [direction, foods]);
+  }, [direction]);
 
   // update score whenever head touches a food
   useEffect(() => {
     const head = snake[0];
     if (isFood(head)) {
-
-      let newFood = getRandomCell();
-      while (isSnake(newFood)) {
-        newFood = getRandomCell();
-      }
-
-      setFoods(currentFoods => {
+      setFoods(currentFoods => 
         currentFoods.filter(food => food.x!==head.x && food.y!==head.y)
-        return [...currentFoods,newFood]//?
-      });
+      );//doesnt work with return
     }
   }, [snake]);
 
@@ -147,39 +140,47 @@ const UseSnake = () => {
     
   },[foods])
 
+   //food after 10s
+   //doesnt work
+   useEffect(() => {
+    const interval = setInterval(()=> {
+      setFoods(currentFoods => currentFoods.slice(1))
+        // currentFoods.shift(); --> doesnt work
+        
+    },10000);
+
+    return ( () =>
+      clearInterval(interval)
+    )
+    
+  },[foods])
+
+  const changeDir = (checkDir, newDir) => {
+    setDirection((direction) => {
+      if(direction!=checkDir)
+        return newDir;
+      return direction;
+    })
+    
+  }
+
   useEffect(() => {
     const handleNavigation = (event) => {
       switch (event.key) {
         case "ArrowUp":
-          setDirection((direction) =>{
-            if(direction!==Direction.Bottom)
-              return Direction.Top;
-            return direction;
-          })
+          changeDir(Direction.Bottom,Direction.Top);
           break;
 
         case "ArrowDown":
-          setDirection((direction) =>{
-            if(direction!==Direction.Top)
-              return Direction.Bottom;
-            return direction;
-          })
+          changeDir(Direction.Top,Direction.Bottom);
           break;
 
         case "ArrowLeft":
-          setDirection((direction) =>{
-            if(direction!==Direction.Right)
-              return Direction.Left;
-            return direction;
-          })
+          changeDir(Direction.Right,Direction.Left);
           break;
 
         case "ArrowRight":
-          setDirection((direction) =>{
-            if(direction!==Direction.Left)
-              return Direction.Right;
-            return direction;
-          })
+          changeDir(Direction.Left,Direction.Right);
           break;
       }
     };
@@ -189,7 +190,6 @@ const UseSnake = () => {
   }, []);
 
   // ?. is called optional chaining
-  // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
   const isFood = ({ x, y }) => 
     foods.find((position)=> position.x === x && position.y === y);
 
