@@ -71,9 +71,9 @@ const useSnake = () => {
     { x: 6, y: 12 },
   ];
 
-  // timeInSec is an additional property to keep track of the time elapsed
+  // timestamp is an additional property to keep track of the time elapsed
   // so that we can remove the food after a time interval 
-  const getInitialFood = () => [ {x: 4, y: 10 , timeInSec: 0}];
+  const getInitialFood = () => [ {x: 4, y: 10 , timestamp: Date.now()}];
 
   const grid = useRef();
 
@@ -87,7 +87,7 @@ const useSnake = () => {
   const resetGame = () => {
     setSnake(getDefaultSnake());
     setDirection(Direction.Right);
-    setFoods([{ x: 4, y: 10}]);
+    setFoods(getInitialFood());
   }
   
   // move the snake
@@ -129,66 +129,52 @@ const useSnake = () => {
 
 
 
+  // remove food whenever head touches a food
+  const removeFood = (foodToRemove) => {
+    setFoods((foods) => foods.filter((food) => food.x != foodToRemove.x || food.y != foodToRemove.y ));
+  }
+
+  useEffect(() => {
+    const head = snake[0];
+    if (isFood(head)) {
+      removeFood(head);
+    }
+  }, [snake]);
+
+
+
+
+  // add food after a time interval (3s)
   const addNewFood = () => {
     let newFood = getRandomCell();
     while (isSnake(newFood) || isFood(newFood)) {
       newFood = getRandomCell();
     }
-
-    newFood.timeInSec = 0;
-    
-    // return the foods remaining after it's dinner including the new food
-    setFoods( (foods) =>  {
-      const head = snake[0];
-      const remainingFoods = foods.filter(food => food.x != head.x || food.y != head.y );
-      return [...remainingFoods , newFood];
-    })
-    
+    setFoods( (foods) => [{...newFood, timestamp: Date.now()}, ...foods]);
   }
-
-
-  // update score and add new food whenever head touches a food
+  
   useEffect(() => {
-    const head = snake[0];
-    if (isFood(head)) {
-      addNewFood();
-    }
-  }, [snake]);
-
-
-  /*
-  // clearInterval approach to update food after a time interval
-  useEffect(() => {
-    const interval = setInterval(() => {
-      let newFood = getRandomCell();
-      while (isSnake(newFood) || isFood(newFood)) {
-        newFood = getRandomCell();
-      }
-      setFoods([...foods, newFood]);
-    }, 3 * 1000)
+    const interval = setInterval(addNewFood, 3 * 1000);
 
     return () => clearInterval(interval);
-  }, [foods])
-  */
+  }, [])
 
-  // update food after a time interval (3s)
-  useEffect(() => {
-  const interval = setInterval(addNewFood, 3 * 1000);
-
-  return () => clearInterval(interval);
-}, [])
 
 
   // remove food after a time interval (10s)
-  useEffect(() => {
-    const removeFood = () => {    
-      setFoods((foods) => {
-        return foods.map(food => ({...food, timeInSec: food.timeInSec + 1})).filter(food => food.timeInSec < 10);  
+  const removeFoodAfterInterval = (timeInMiliSec) => {
+    setFoods(foods => {
+      return foods.filter(food => {
+        return Date.now() - food.timestamp <= timeInMiliSec
       })
-    }
+    });
+  }
 
-    // call the removeFood function after each second to update the time elapsed attribute
-    const interval = setInterval(removeFood, 1000);
+  useEffect(() => {
+    removeFoodAfterInterval(10 * 1000);
+
+    // call the removeFood function after each second to remove foods that existed more than or equal to 10s
+    const interval = setInterval(() => removeFoodAfterInterval(10 * 1000), 1000);
 
     return () => clearInterval(interval);
   }, [])
@@ -236,8 +222,8 @@ const useSnake = () => {
 
   const isSnake = ({ x, y }) =>
     snake.find((position) => position.x === x && position.y === y);
-
-  return [score, isFood, isSnake];
+ 
+    return [score, isFood, isSnake];
 
 }
 
