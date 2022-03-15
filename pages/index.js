@@ -178,48 +178,31 @@ const Snake = () => {
   }, []);
 
 
-  
+const handleDirection = (currentDirection,revCurrentDirection) =>{
 
+  setDirection(prevDirection=>{
+    if(prevDirection === revCurrentDirection)
+      return prevDirection;
+    return currentDirection;
+  })
+}
   useEffect(() => {
     const handleNavigation = (event) => {
       switch (event.key) {
         case "ArrowUp":
-          setDirection((prevDirection)=>{
-          if(prevDirection===Direction.Bottom)
-            return prevDirection;
-          else
-            return Direction.Top;
-          
-
-          });
-            
+          handleDirection(Direction.Top, Direction.Bottom)            
           break;
 
         case "ArrowDown":
-          setDirection((prevDirection)=>{
-            if(prevDirection===Direction.Top)
-              return prevDirection;
-            else
-              return Direction.Bottom;
-          });
+          handleDirection(Direction.Bottom, Direction.Top) 
           break;
 
         case "ArrowLeft":
-          setDirection((prevDirection)=>{
-            if(prevDirection===Direction.Right)
-              return prevDirection;
-            else
-              return Direction.Left;
-          });
+          handleDirection(Direction.Left, Direction.Right) 
           break;
 
         case "ArrowRight":
-          setDirection((prevDirection)=>{
-            if(prevDirection===Direction.Left)
-              return prevDirection;
-            else
-              return Direction.Right;
-          });
+          handleDirection(Direction.Right, Direction.Left) 
           break;
       }
     };
