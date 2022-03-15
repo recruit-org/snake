@@ -75,7 +75,7 @@ const Snake = () => {
   const [snake, setSnake] = useState(getDefaultSnake());
   const [direction, setDirection] = useState(Direction.Right);
 
-  const [food, setFood] = useState({ x: 4, y: 10 });
+  const [food, setFood] = useState([]);
   const [score, setScore] = useState(0);
 
   // move the snake
@@ -87,11 +87,42 @@ const Snake = () => {
 
         // make a new snake by extending head
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
-        const newSnake = [newHead, ...snake];
-
+        
+        let newSnake = [newHead, ...snake];
+        for (let index in newSnake){
+          if(direction===Direction.Right){
+            if(newSnake[index].x===Config.width){
+              newSnake[index].x=0
+            }
+          }
+          if(direction===Direction.Left){
+            if(newSnake[index].x===-1){
+              newSnake[index].x=Config.width-1
+            }
+          }
+          if(direction===Direction.Top){
+            if(newSnake[index].y===-1){
+              newSnake[index].y=Config.height-1
+            }
+          }
+          if(direction===Direction.Bottom){
+            if(newSnake[index].y===Config.height){
+              newSnake[index].y=0
+            }
+          }
+        }
+        const tempSnake = [...snake]
         // remove tail
-        newSnake.pop();
+        !isFood(newHead) && newSnake.pop() && tempSnake.pop();
 
+        for(let index in tempSnake){
+           if(tempSnake[index].x===newHead.x && tempSnake[index].y === newHead.y){  
+            setSnake(getDefaultSnake());
+            setDirection(Direction.Right);
+            setFood([ { x: 4, y: 10 ,time: Date.now() } ]);
+            setScore(0);
+          }
+        }
         return newSnake;
       });
     };
@@ -105,37 +136,73 @@ const Snake = () => {
   // update score whenever head touches a food
   useEffect(() => {
     const head = snake[0];
-    if (isFood(head)) {
+      if (isFood(head)) {
       setScore((score) => {
         return score + 1;
       });
+
+      const filteredFood = food.filter((f)=>f.x!==head.x || f.y!==head.y);
+      setFood(()=>[...filteredFood])
+    }
+    
+  }, [snake]);
+
+  useEffect(() => {
+    const showFood = () => {
 
       let newFood = getRandomCell();
       while (isSnake(newFood)) {
         newFood = getRandomCell();
       }
 
-      setFood(newFood);
-    }
-  }, [snake]);
+      setFood((prevFood)=> [{ ...newFood, time: Date.now() }, ...prevFood] );
+    }     
+    showFood();
+    const timer = setInterval(showFood, 3000);
 
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const removeFood = () => {
+
+    setFood((prevFood)=>{
+        const filteredFood = prevFood.filter((f)=>(Math.abs(Date.now()-f.time))<=10000);
+        return [...filteredFood]
+    });
+    } 
+    removeFood();
+    const timer = setInterval(removeFood, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+
+const handleDirection = (currentDirection,revCurrentDirection) =>{
+
+  setDirection(prevDirection=>{
+    if(prevDirection === revCurrentDirection)
+      return prevDirection;
+    return currentDirection;
+  })
+}
   useEffect(() => {
     const handleNavigation = (event) => {
       switch (event.key) {
         case "ArrowUp":
-          setDirection(Direction.Top);
+          handleDirection(Direction.Top, Direction.Bottom)            
           break;
 
         case "ArrowDown":
-          setDirection(Direction.Bottom);
+          handleDirection(Direction.Bottom, Direction.Top) 
           break;
 
         case "ArrowLeft":
-          setDirection(Direction.Left);
+          handleDirection(Direction.Left, Direction.Right) 
           break;
 
         case "ArrowRight":
-          setDirection(Direction.Right);
+          handleDirection(Direction.Right, Direction.Left) 
           break;
       }
     };
@@ -146,7 +213,7 @@ const Snake = () => {
 
   // ?. is called optional chaining
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
-  const isFood = ({ x, y }) => food?.x === x && food?.y === y;
+  const isFood = ({ x, y }) => food.some((f)=>f?.x === x && f?.y === y)   
 
   const isSnake = ({ x, y }) =>
     snake.find((position) => position.x === x && position.y === y);
