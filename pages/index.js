@@ -82,7 +82,7 @@ const useSnake = () => {
   const [direction, setDirection] = useState(Direction.Right);
 
   const [foods, setFoods] = useState(getInitialFood());
-  const score = snake.length - 3;
+  const score = snake.length - getDefaultSnake().length;
 
   const resetGame = () => {
     setSnake(getDefaultSnake());
@@ -223,13 +223,13 @@ const useSnake = () => {
   const isSnake = ({ x, y }) =>
     snake.find((position) => position.x === x && position.y === y);
  
-    return [score, isFood, isSnake];
+    return {score, isFood, isSnake};
 
 }
 
 
 const Snake = () => {
-  const [score, isFood, isSnake] = useSnake();
+  const {score, isFood, isSnake} = useSnake();
 
   const cells = [];
   for (let x = 0; x < Config.width; x++) {
