@@ -97,7 +97,7 @@ const Snake = () => {
     };
 
     runSingleStep();
-    const timer = setInterval(runSingleStep, 600);
+    const timer = setInterval(runSingleStep, 700);
 
     return () => clearInterval(timer);
   }, [direction, food]);
@@ -123,11 +123,11 @@ const Snake = () => {
     const handleNavigation = (event) => {
       switch (event.key) {
         case "ArrowUp":
-          setDirection(Direction.Top);
+          setDirection(Direction.Bottom);
           break;
 
         case "ArrowDown":
-          setDirection(Direction.Bottom);
+          setDirection(Direction.Top);
           break;
 
         case "ArrowLeft":
