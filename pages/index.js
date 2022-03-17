@@ -97,7 +97,7 @@ const Snake = () => {
     };
 
     runSingleStep();
-    const timer = setInterval(runSingleStep, 500);
+    const timer = setInterval(runSingleStep, 600);
 
     return () => clearInterval(timer);
   }, [direction, food]);
