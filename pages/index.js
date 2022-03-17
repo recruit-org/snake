@@ -77,13 +77,13 @@ const UseSnake = () => {
   const [snake, setSnake] = useState(getDefaultSnake());
   const [direction, setDirection] = useState(Direction.Right);
 
-  const [foods, setFoods] = useState([{ x: 4, y: 10 }]);
+  const [foods, setFoods] = useState([]);
   const score = snake.length-3;
 
   const resetGame = () => {
     setSnake(getDefaultSnake())
     setDirection(Direction.Right)
-    setFoods([{ x: 4, y: 10 }])
+    setFoods([])
   }
   // move the snake
   useEffect(() => {
@@ -118,9 +118,9 @@ const UseSnake = () => {
   useEffect(() => {
     const head = snake[0];
     if (isFood(head)) {
-      setFoods(currentFoods => 
-        currentFoods.filter(food => food.x!==head.x && food.y!==head.y)
-      );//doesnt work with return
+      setFoods(currentFoods =>currentFoods.filter(food => food.x!==head.x && food.y!==head.y)
+    
+    );
     }
   }, [snake]);
 
@@ -132,20 +132,23 @@ const UseSnake = () => {
         newFood = getRandomCell();
       }
     setFoods(currentFoods => [...currentFoods,newFood]);
+    setTimeout(() => {
+      setFoods((f) => f.filter(e => e.x !=newFood.x && e.y !=newFood.y))
+    }, 10*1000)
     },3000);
 
     return ( () =>
       clearInterval(interval)
     )
     
-  },[foods])
+  },[])
 
    //food after 10s
    //doesnt work
    useEffect(() => {
     const interval = setInterval(()=> {
-      setFoods(currentFoods => currentFoods.slice(1))
-        // currentFoods.shift(); --> doesnt work
+      // setFoods(currentFoods => currentFoods.slice(1))
+        // currentFoods.shift(); --> doesnt work either
         
     },10000);
 
@@ -153,7 +156,7 @@ const UseSnake = () => {
       clearInterval(interval)
     )
     
-  },[foods])
+  },[])
 
   const changeDir = (checkDir, newDir) => {
     setDirection((direction) => {
