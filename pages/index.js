@@ -122,54 +122,39 @@ const useSnake = () =>{
     return () => clearInterval(timer);
   }, [direction, foods]);
 
+  const addNewFood = () => {
+    let newFood = getRandomCell();
+    while (isSnake(newFood)) {
+      newFood = getRandomCell();
+    }
+
+    setFoods((fs) => [...fs, newFood]);
+  };
+  const removeFood = () => {
+    setFoods((foods) => foods.slice(1));
+  };
+
   // update score whenever head touches a food
   useEffect(() => {
     const head = snake[0];
-    
-        // check if the new head colide with the body of the snake
-
-       
-    if (isFood(head) ) {
-     
-
-
-      let newFood = getRandomCell();
-      while (isSnake(newFood)) {
-        newFood = getRandomCell();
-      }
-      if(foods.length !== 0)
-        foods.shift();
-
-      setFoods([newFood,...foods])
-      console.log(foods.length)
-      
+    if (isFood(head)) {
+      setFoods((foods) => foods.filter((food) => food.x !== head.x && food.y !== head.y));
+      addNewFood();
     }
-    
   }, [snake]);
 
+  useEffect(() => {    const interval = setInterval(() => {
+      addNewFood();
+    }, 3*1000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
-    const interval = setInterval( () => {
-      let newFood = getRandomCell();
-
-      while(isSnake(newFood) || isFood(newFood)){
-        newFood = getRandomCell();
-      }
-
-      foods.shift();
-      setFoods([...foods, newFood]);
-      
-    }, 2*1000)
-
-    // const interval2 = setInterval(()=>{
-    //     foods.pop();
-    //   console.log(foods.length)
-    // },3*1000)
-    return () =>{
-      clearInterval(interval);
-    }
-
-    
-  },[])
+    const interval = setInterval(() => {
+      removeFood();
+    }, 10*1000);
+    return () => clearInterval(interval);
+  }, []);
   useEffect(() => {
    const  handleDirection = (go_Direction, non_accessable_direcion) => {
      setDirection((current_direction) => {
