@@ -61,7 +61,7 @@ const Cell = ({ x, y, type }) => {
 const getRandomCell = () => ({
   x: Math.floor(Math.random() * Config.width),
   y: Math.floor(Math.random() * Config.width),
-  start: Math.floor(Math.random()),
+  start: Math.floor(Math.random()*100),
 });
 
 //custom hook
