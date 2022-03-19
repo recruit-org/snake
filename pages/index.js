@@ -3,8 +3,8 @@ import { useEffect, useState, useRef } from "react";
 import styles from "../styles/Snake.module.css";
 
 const Config = {
-  height: 25,
-  width: 25,
+  height: 15,
+  width: 15,
   cellSize: 32,
 };
 
@@ -61,6 +61,7 @@ const Cell = ({ x, y, type }) => {
 const getRandomCell = () => ({
   x: Math.floor(Math.random() * Config.width),
   y: Math.floor(Math.random() * Config.width),
+  start: Math.floor(Math.random()),
 });
 
 //custom hook
@@ -78,30 +79,32 @@ const UseSnake = () => {
   const [direction, setDirection] = useState(Direction.Right);
 
   const [foods, setFoods] = useState([]);
-  const score = snake.length-3;
+  const score = snake.length - 3;
 
   const resetGame = () => {
-    setSnake(getDefaultSnake())
-    setDirection(Direction.Right)
-    setFoods([])
-  }
+    setSnake(getDefaultSnake());
+    setDirection(Direction.Right);
+    setFoods([]);
+  };
   // move the snake
   useEffect(() => {
     const runSingleStep = () => {
       setSnake((snake) => {
         const head = snake[0];
-        const newHead = { x: (head.x + direction.x + Config.width) % Config.width, 
-          y: (head.y + direction.y + Config.height) % Config.height };
+        const newHead = {
+          x: (head.x + direction.x + Config.width) % Config.width,
+          y: (head.y + direction.y + Config.height) % Config.height,
+        };
 
         // make a new snake by extending head
         const newSnake = [newHead, ...snake];
 
         // remove tail when head doesnt eat food
-        if(!isFood(newHead)){
+        if (!isFood(newHead)) {
           newSnake.pop();
         }
-        if(isSnake(newHead)){
-          resetGame()
+        if (isSnake(newHead)) {
+          resetGame();
         }
 
         return newSnake;
@@ -118,72 +121,56 @@ const UseSnake = () => {
   useEffect(() => {
     const head = snake[0];
     if (isFood(head)) {
-      setFoods(currentFoods =>currentFoods.filter(food => food.x!==head.x && food.y!==head.y)
-    
-    );
+      setFoods((currentFoods) =>
+        currentFoods.filter((food) => food.x !== head.x && food.y !== head.y)
+      );
     }
   }, [snake]);
 
   //food after 3s
   useEffect(() => {
-    const interval = setInterval(()=> {
+    const interval = setInterval(() => {
       let newFood = getRandomCell();
       while (isSnake(newFood) || isFood(newFood)) {
         newFood = getRandomCell();
       }
-    setFoods(currentFoods => [...currentFoods,newFood]);
-    setTimeout(() => {
-      setFoods((f) => f.filter(e => e.x !=newFood.x && e.y !=newFood.y))
-    }, 10*1000)
-    },3000);
-
-    return ( () =>
-      clearInterval(interval)
-    )
-    
-  },[])
-
-   //food after 10s
-   //doesnt work
-   useEffect(() => {
-    const interval = setInterval(()=> {
-      // setFoods(currentFoods => currentFoods.slice(1))
-        // currentFoods.shift(); --> doesnt work either
-        
-    },10000);
-
-    return ( () =>
-      clearInterval(interval)
-    )
-    
-  },[])
+      setFoods((currentFoods) => [...currentFoods, newFood]);
+      setTimeout(() => {
+        setFoods((f) =>
+          f.filter(
+            (e) =>
+             e.start!==newFood.start
+          )
+        );
+      },10*1000);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   const changeDir = (checkDir, newDir) => {
     setDirection((direction) => {
-      if(direction!=checkDir)
-        return newDir;
+      if (direction != checkDir) return newDir;
       return direction;
-    })
-    
-  }
+    });
+  };
 
   useEffect(() => {
     const handleNavigation = (event) => {
       switch (event.key) {
         case "ArrowUp":
-          changeDir(Direction.Bottom,Direction.Top);
+          changeDir(Direction.Bottom, Direction.Top);
           break;
 
         case "ArrowDown":
-          changeDir(Direction.Top,Direction.Bottom);
+          changeDir(Direction.Top, Direction.Bottom);
           break;
 
         case "ArrowLeft":
-          changeDir(Direction.Right,Direction.Left);
+          changeDir(Direction.Right, Direction.Left);
           break;
 
         case "ArrowRight":
-          changeDir(Direction.Left,Direction.Right);
+          changeDir(Direction.Left, Direction.Right);
           break;
       }
     };
@@ -193,19 +180,18 @@ const UseSnake = () => {
   }, []);
 
   // ?. is called optional chaining
-  const isFood = ({ x, y }) => 
-    foods.find((position)=> position.x === x && position.y === y);
+  const isFood = ({ x, y }) =>
+    foods.find((position) => position.x === x && position.y === y);
 
   const isSnake = ({ x, y }) =>
     snake.find((position) => position.x === x && position.y === y);
 
-  
-  return {score,isFood, isSnake}
-}
+  return { score, isFood, isSnake };
+};
 
 //view
 const Snake = () => {
-  const {score, isFood, isSnake} = UseSnake()
+  const { score, isFood, isSnake } = UseSnake();
   const cells = [];
   for (let x = 0; x < Config.width; x++) {
     for (let y = 0; y < Config.height; y++) {
