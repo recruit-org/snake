@@ -146,6 +146,18 @@ useEffect(() => {
   }
 }, [])
 
+
+useEffect(() => { // took help from an existing PR to make this work, but i think this is buggy. 
+  const interval = setInterval(() => {
+    removeFood();
+  }, 10*1000);
+  return () => clearInterval(interval);
+}, []);
+
+
+const removeFood = () => {
+  setFood((foods) => foods.slice(1));
+};
 // update score whenever head touches a foods
 useEffect(() => {
   const head = snake[0];
