@@ -197,6 +197,14 @@ const useSnake = () => {
       // only if the newHead isn't a food
       if (!isFood(newHead)) {
         newSnake.pop();
+        if(isPoison(newHead)) {
+          newSnake.pop();
+          setPoisons((currentPoisons) =>
+            currentPoisons.filter(
+              (poison) => !(poison.x === newHead.x && poison.y === newHead.y)
+            )
+          );
+        }
       } else {
         setFoods((currentFoods) =>
           currentFoods.filter(
@@ -207,7 +215,7 @@ const useSnake = () => {
 
       return newSnake;
     });
-  }, [direction, isFood, isSnake, resetGame]);
+  }, [direction, isFood, isPoison, isSnake, resetGame]);
 
   useInterval(runSingleStep, 200);
   useInterval(addFood, 3000);
