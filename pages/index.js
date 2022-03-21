@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import styles from "../styles/Snake.module.css";
 
 const Config = {
@@ -61,36 +61,86 @@ const Cell = ({ x, y, type }) => {
 const getRandomCell = () => ({
   x: Math.floor(Math.random() * Config.width),
   y: Math.floor(Math.random() * Config.width),
+  createdAt: Date.now(),
 });
 
-const Snake = () => {
+const getInitialFoods = () => [{ x: 4, y: 10, createdAt: Date.now() }];
+
+const getInitialDirection = () => Direction.Right;
+
+const useSnake = () => {
   const getDefaultSnake = () => [
     { x: 8, y: 12 },
     { x: 7, y: 12 },
     { x: 6, y: 12 },
   ];
-  const grid = useRef();
 
   // snake[0] is head and snake[snake.length - 1] is tail
   const [snake, setSnake] = useState(getDefaultSnake());
-  const [direction, setDirection] = useState(Direction.Right);
+  const [direction, setDirection] = useState(getInitialDirection());
 
-  const [food, setFood] = useState({ x: 4, y: 10 });
-  const [score, setScore] = useState(0);
+  const [foods, setFoods] = useState(getInitialFoods());
+
+  const score = snake.length - 3;
+
+  // useCallback() prevents instantiation of a function on each rerender
+  // based on the dependency array
+
+  // resets the snake ,foods, direction to initial values
+  const resetGame = useCallback(() => {
+    setFoods(getInitialFoods());
+    setDirection(getInitialDirection());
+  }, []);
+
+  const removeFoods = useCallback(() => {
+    // only keep those foods which were created within last 10s.
+    setFoods((currentFoods) =>
+      currentFoods.filter((food) => Date.now() - food.createdAt <= 10 * 1000)
+    );
+  }, []);
+
+  const addFood = useCallback(() => {
+    let newFood = getRandomCell();
+    while (isSnake(newFood) || isFood(newFood)) {
+      newFood = getRandomCell();
+    }
+    setFoods((currentFoods) => [...currentFoods, newFood]);
+  }, [isFood, isSnake]);
 
   // move the snake
   useEffect(() => {
     const runSingleStep = () => {
       setSnake((snake) => {
         const head = snake[0];
-        const newHead = { x: head.x + direction.x, y: head.y + direction.y };
+
+        // 0 <= a % b < b
+        // so new x will always be inside the grid
+        const newHead = {
+          x: (head.x + direction.x + Config.height) % Config.height,
+          y: (head.y + direction.y + Config.width) % Config.width,
+        };
 
         // make a new snake by extending head
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
         const newSnake = [newHead, ...snake];
 
-        // remove tail
-        newSnake.pop();
+        // reset the game if the snake hit itself
+        if (isSnake(newHead)) {
+          resetGame();
+          return getDefaultSnake();
+        }
+
+        // remove tail from the increased size snake
+        // only if the newHead isn't a food
+        if (!isFood(newHead)) {
+          newSnake.pop();
+        } else {
+          setFoods((currentFoods) =>
+            currentFoods.filter(
+              (food) => !(food.x === newHead.x && food.y === newHead.y)
+            )
+          );
+        }
 
         return newSnake;
       });
@@ -100,42 +150,52 @@ const Snake = () => {
     const timer = setInterval(runSingleStep, 500);
 
     return () => clearInterval(timer);
-  }, [direction, food]);
+  }, [direction, foods, isFood, resetGame, isSnake]);
 
-  // update score whenever head touches a food
   useEffect(() => {
-    const head = snake[0];
-    if (isFood(head)) {
-      setScore((score) => {
-        return score + 1;
+    // add a food in a 3s interval
+    const createFoodIntervalId = setInterval(() => {
+      addFood();
+    }, 3000);
+
+    // run the remove function each second,
+    // but the function will decide which foods are
+    // older than 10s and delete them
+    const removeFoodIntervalId = setInterval(() => {
+      removeFoods();
+    }, 1000);
+
+    return () => {
+      clearInterval(createFoodIntervalId);
+      clearInterval(removeFoodIntervalId);
+    };
+  }, [addFood, removeFoods]);
+
+  useEffect(() => {
+    const handleDirection = (direction, oppositeDirection) => {
+      setDirection((currentDirection) => {
+        if (currentDirection === oppositeDirection) {
+          return currentDirection;
+        } else return direction;
       });
+    };
 
-      let newFood = getRandomCell();
-      while (isSnake(newFood)) {
-        newFood = getRandomCell();
-      }
-
-      setFood(newFood);
-    }
-  }, [snake]);
-
-  useEffect(() => {
     const handleNavigation = (event) => {
       switch (event.key) {
         case "ArrowUp":
-          setDirection(Direction.Top);
+          handleDirection(Direction.Top, Direction.Bottom);
           break;
 
         case "ArrowDown":
-          setDirection(Direction.Bottom);
+          handleDirection(Direction.Bottom, Direction.Top);
           break;
 
         case "ArrowLeft":
-          setDirection(Direction.Left);
+          handleDirection(Direction.Left, Direction.Right);
           break;
 
         case "ArrowRight":
-          setDirection(Direction.Right);
+          handleDirection(Direction.Right, Direction.Left);
           break;
       }
     };
@@ -146,10 +206,16 @@ const Snake = () => {
 
   // ?. is called optional chaining
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
-  const isFood = ({ x, y }) => food?.x === x && food?.y === y;
+  const isFood = useCallback(
+    ({ x, y }) => foods.some((food) => food.x === x && food.y === y),
+    [foods]
+  );
 
-  const isSnake = ({ x, y }) =>
-    snake.find((position) => position.x === x && position.y === y);
+  const isSnake = useCallback(
+    ({ x, y }) =>
+      snake.find((position) => position.x === x && position.y === y),
+    [snake]
+  );
 
   const cells = [];
   for (let x = 0; x < Config.width; x++) {
@@ -164,6 +230,15 @@ const Snake = () => {
     }
   }
 
+  return {
+    snake,
+    cells,
+    score,
+  };
+};
+
+const Snake = () => {
+  const { cells, score } = useSnake();
   return (
     <div className={styles.container}>
       <div
