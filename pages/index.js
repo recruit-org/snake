@@ -12,6 +12,7 @@ const CellType = {
   Snake: "snake",
   Food: "food",
   Empty: "empty",
+  Poison: "poison"
 };
 
 const Direction = {
@@ -39,6 +40,15 @@ const Cell = ({ x, y, type, remaining }) => {
           height: 32,
           transform: `scale(${0.5 + remaining / 20})`,
         };
+
+        case CellType.Poison:
+          return {
+            backgroundColor: "blue",
+            borderRadius: 20,
+            width: 32,
+            height: 32,
+            transform: `scale(${0.5 + remaining / 20})`,
+          };
 
       default:
         return {};
@@ -100,6 +110,7 @@ const useSnake = () => {
   const [direction, setDirection] = useState(getInitialDirection());
 
   const [foods, setFoods] = useState([]);
+  const [poisons, setPoisons] = useState([]);
 
   const score = snake.length - 3;
 
@@ -119,11 +130,23 @@ const useSnake = () => {
     );
   }, []);
 
+  const removePoisons = useCallback(() => {
+    // only keep those foods which were created within last 10s.
+    setPoisons((currentPoisons) =>
+    currentPoisons.filter((poison) => Date.now() - poison.createdAt <= 10 * 1000)
+    );
+  }, []);
+
   // ?. is called optional chaining
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
   const isFood = useCallback(
     ({ x, y }) => foods.some((food) => food.x === x && food.y === y),
     [foods]
+  );
+
+  const isPoison = useCallback(
+    ({ x, y }) => poisons.some((poison) => poison.x === x && poison.y === y),
+    [poisons]
   );
 
   const isSnake = useCallback(
@@ -134,11 +157,19 @@ const useSnake = () => {
 
   const addFood = useCallback(() => {
     let newFood = getRandomCell();
-    while (isSnake(newFood) || isFood(newFood)) {
+    while (isSnake(newFood) || isFood(newFood) || isPoison(newFood)) {
       newFood = getRandomCell();
     }
     setFoods((currentFoods) => [...currentFoods, newFood]);
-  }, [isFood, isSnake]);
+  }, [isFood, isPoison, isSnake]);
+
+  const addPoison = useCallback(() => {
+    let newPoison = getRandomCell();
+    while (isSnake(newPoison) || isFood(newPoison) || isPoison(newPoison)) {
+      newPoison = getRandomCell();
+    }
+    setPoisons((currentPoisons) => [...currentPoisons, newPoison]);
+  }, [isFood, isPoison, isSnake]);
 
   // move the snake
   const runSingleStep = useCallback(() => {
@@ -180,7 +211,9 @@ const useSnake = () => {
 
   useInterval(runSingleStep, 200);
   useInterval(addFood, 3000);
+  useInterval(addPoison, 6000);
   useInterval(removeFoods, 100);
+  useInterval(removePoisons, 100);
 
   useEffect(() => {
     const handleDirection = (direction, oppositeDirection) => {
@@ -231,6 +264,15 @@ const useSnake = () => {
           );
       } else if (isSnake({ x, y })) {
         type = CellType.Snake;
+      } else if(isPoison({ x, y })) {
+        type = CellType.Poison;
+        remaining =
+          10 -
+          Math.round(
+            (Date.now() -
+              poisons.find((poison) => poison.x === x && poison.y === y).createdAt) /
+              1000
+          );
       }
       cells.push(
         <Cell key={`${x}-${y}`} x={x} y={y} type={type} remaining={remaining} />
