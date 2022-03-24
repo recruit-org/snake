@@ -63,109 +63,161 @@ const getRandomCell = () => ({
   y: Math.floor(Math.random() * Config.width),
 });
 
-const Snake = () => {
-  const getDefaultSnake = () => [
-    { x: 8, y: 12 },
-    { x: 7, y: 12 },
-    { x: 6, y: 12 },
-  ];
-  const grid = useRef();
+      
+      const useSnake =()=>{
+        
+          const getDefaultSnake = () => [
+            { x: 8, y: 12 },
+            { x: 7, y: 12 },
+            { x: 6, y: 12 },
+          ];
+          const grid = useRef();
+        
+          // snake[0] is head and snake[snake.length - 1] is tail
+          const [snake, setSnake] = useState(getDefaultSnake());
+          const [direction, setDirection] = useState(Direction.Right);
+        
+          const [foods, setFoods] = useState([{ x: 4, y: 10 }]);
+          const score =snake.length-3;
 
-  // snake[0] is head and snake[snake.length - 1] is tail
-  const [snake, setSnake] = useState(getDefaultSnake());
-  const [direction, setDirection] = useState(Direction.Right);
+          const resetGame = () =>{
+            setSnake(getDefaultSnake());
+            setDirection(Direction.Right)
+          }
+          const addNewFood =() =>{
+            let newFood = getRandomCell();
+            while (isSnake(newFood) || isFood(newFood)) {
+              newFood = getRandomCell();
+            }
+           
+            setFoods( (CurrentFoods) =>[...CurrentFoods, newFood]);
+          }
+        
+          // move the snake
+          useEffect(() => {
+            const runSingleStep = () => {
+              setSnake((snake) => {
+                const head = snake[0];
+                const newHead = { 
+                  x: (head.x + direction.x +Config.width)% Config.width,
+                  y: (head.y + direction.y  +Config.height)% Config.height, 
+                  };
+        
+                // make a new snake by extending head
+                // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
+                const newSnake = [newHead, ...snake];
+        
+                // remove tail when head is not in the food
+                if(!isFood(newHead)){
+                newSnake.pop();}
 
-  const [food, setFood] = useState({ x: 4, y: 10 });
-  const [score, setScore] = useState(0);
+                if(isSnake(newHead)){
+                  resetGame()
+                }
+              
+        
+                return newSnake;
+              });
+            };
+        
+            runSingleStep();
+            const timer = setInterval(runSingleStep, 500);
+        
+            return () => clearInterval(timer);
+          }, [direction, foods]);
+        
 
-  // move the snake
-  useEffect(() => {
-    const runSingleStep = () => {
-      setSnake((snake) => {
-        const head = snake[0];
-        const newHead = { x: head.x + direction.x, y: head.y + direction.y };
+          useEffect(() => {
+            const head = snake[0];
+            if (isFood(head)) {
+              // setScore((score) => {
+              //   return score + 1;
+              // });
+        
+             addNewFood()            }
+          
+           } ,[snake]);
+// difference between setinerval and set timeout ....and  array.find and some 
+  
+    useEffect(()=>{
+      const interval = setInterval(()=>{
+       addNewFood()
+        },3*1000  )
+        return() => {clearInterval(interval) }
+    } ,[] ) 
 
-        // make a new snake by extending head
-        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
-        const newSnake = [newHead, ...snake];
+    useEffect(() => {
+      const disappear = setTimeout(() => {
+        // console.log('This will run after 1 second!')
+      setFoods
+      }, 10*1000);
+      return () => clearTimeout(disappear);
+    }, []);
+    
 
-        // remove tail
-        newSnake.pop();
 
-        return newSnake;
-      });
-    };
-
-    runSingleStep();
-    const timer = setInterval(runSingleStep, 700);
-
-    return () => clearInterval(timer);
-  }, [direction, food]);
-
-  // update score whenever head touches a food
-  useEffect(() => {
-    const head = snake[0];
-    if (isFood(head)) {
-      setScore((score) => {
-        return score + 1;
-      });
-
-      let newFood = getRandomCell();
-      while (isSnake(newFood)) {
-        newFood = getRandomCell();
+        
+          useEffect(() => {
+            const handleDirection = (direction,oppositeDirection) =>{
+              setDirection((currentDirection)=> {
+                if( currentDirection !== oppositeDirection){
+                return (direction);} 
+                return currentDirection})
+            }
+            const handleNavigation = (event) => {
+              switch (event.key) {
+                case "ArrowUp":
+                handleDirection(Direction.Top,Direction.Bottom)                 
+                break;
+        
+                case "ArrowDown":
+                  handleDirection(Direction.Bottom,Direction.Top)
+                    break;
+        
+                case "ArrowLeft":
+                 
+                  handleDirection(Direction.Left,Direction.Right)
+                  break;
+                  
+                  case "ArrowRight":
+                  
+                    handleDirection(Direction.Right,Direction.Left)
+                    break;
+                  }
+                };
+                window.addEventListener("keydown", handleNavigation);
+                
+                return () => window.removeEventListener("keydown", handleNavigation);
+              }, []);
+              
+              // ?. is called optional chaining
+              // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
+              const isFood = ({ x, y }) => foods.some((food)=>food.x === x && food.y === y);
+              
+              const isSnake = ({ x, y }) =>
+              snake.find((position) => position.x === x && position.y === y);
+        //  console.log(isSnake,snake)
+               return{score,isSnake,isFood}
+      }
+      // update score whenever head touches a food
+      
+      const Snake =() =>{const{score,isSnake,isFood}= useSnake()
+      const cells = [];
+      for (let x = 0; x < Config.width; x++) {
+        for (let y = 0; y < Config.height; y++) {
+          let type = CellType.Empty;
+          if (isFood({ x, y })) {
+            type = CellType.Food;
+          } else if (isSnake({ x, y })) {
+            type = CellType.Snake;
+          }
+          cells.push(<Cell key={`${x}-${y}`} x={x} y={y} type={type} />);
+        }
+       
       }
 
-      setFood(newFood);
-    }
-  }, [snake]);
-
-  useEffect(() => {
-    const handleNavigation = (event) => {
-      switch (event.key) {
-        case "ArrowUp":
-          setDirection(Direction.Bottom);
-          break;
-
-        case "ArrowDown":
-          setDirection(Direction.Top);
-          break;
-
-        case "ArrowLeft":
-          setDirection(Direction.Left);
-          break;
-
-        case "ArrowRight":
-          setDirection(Direction.Right);
-          break;
-      }
-    };
-    window.addEventListener("keydown", handleNavigation);
-
-    return () => window.removeEventListener("keydown", handleNavigation);
-  }, []);
-
-  // ?. is called optional chaining
-  // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
-  const isFood = ({ x, y }) => food?.x === x && food?.y === y;
-
-  const isSnake = ({ x, y }) =>
-    snake.find((position) => position.x === x && position.y === y);
-
-  const cells = [];
-  for (let x = 0; x < Config.width; x++) {
-    for (let y = 0; y < Config.height; y++) {
-      let type = CellType.Empty;
-      if (isFood({ x, y })) {
-        type = CellType.Food;
-      } else if (isSnake({ x, y })) {
-        type = CellType.Snake;
-      }
-      cells.push(<Cell key={`${x}-${y}`} x={x} y={y} type={type} />);
-    }
-  }
-
-  return (
-    <div className={styles.container}>
+      return (
+        <div className={styles.container}>
       <div
         className={styles.header}
         style={{ width: Config.width * Config.cellSize }}
