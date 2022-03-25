@@ -1,5 +1,6 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState, useRef } from "react";
+import { useCallback } from "react/cjs/react.production.min";
 import styles from "../styles/Snake.module.css";
 
 const Config = {
@@ -61,6 +62,7 @@ const Cell = ({ x, y, type }) => {
 const getRandomCell = () => ({
   x: Math.floor(Math.random() * Config.width),
   y: Math.floor(Math.random() * Config.width),
+  createdAt: Date.now()
 });
 
 const Snake = () => {
@@ -85,6 +87,20 @@ const Snake = () => {
     setDirection(Direction.Right);
   };
 
+  // remove food after 3 sec
+  useEffect(() => {
+    const removeFood = () => {
+      setFoods((currentFood)=> currentFood.filter((food)=> Date.now() - food.createdAt <= 10*1000 ))
+    }
+    const interval = setTimeout(() => {
+      removeFood()
+    }, 5000)
+    return () => {
+      clearInterval(interval)
+    }
+  },[])
+
+ 
   // move the snake
   useEffect(() => {
     const runSingleStep = () => {
@@ -98,7 +114,7 @@ const Snake = () => {
         // make a new snake by extending head
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
         const newSnake = [newHead, ...snake];
-
+        
         // remove tail
         if (!isFood(newHead)) {
           newSnake.pop();
@@ -117,12 +133,11 @@ const Snake = () => {
       });
     };
     const interval = setInterval(() => {
-      runSingleStep()
-    }, 200)
+      runSingleStep();
+    }, 200);
     return () => {
       clearInterval(interval);
     };
-
   }, [direction, foods]);
 
   // food add function
