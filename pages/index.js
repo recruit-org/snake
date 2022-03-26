@@ -11,6 +11,7 @@ const Config = {
 const CellType = {
   Snake: "snake",
   Food: "food",
+  Poison: "poison",
   Empty: "empty",
 };
 
@@ -38,6 +39,14 @@ const Cell = ({ x, y, type, remaining }) => {
           width: 32,
           height: 32,
           transform: `scale(${0.5 + remaining / 20})`,
+        };
+      
+      case CellType.Poison:
+        return {
+          backgroundColor: "black",
+          borderRadius: 5,
+          width: 32,
+          height: 32,
         };
 
       default:
@@ -88,6 +97,13 @@ const useInterval = (callback, duration) => {
   }, [wrappedCallback, duration]);
 };
 
+
+/* 
+hook structure:
+  1. define the states - useState
+  2. define useMemo, useCallback
+  3. define useEffect
+*/
 const useSnake = () => {
   const getDefaultSnake = () => [
     { x: 8, y: 12 },
@@ -100,6 +116,7 @@ const useSnake = () => {
   const [direction, setDirection] = useState(getInitialDirection());
 
   const [foods, setFoods] = useState([]);
+  const [poisons, setPoisons] = useState([]);
 
   const score = snake.length - 3;
 
@@ -110,6 +127,7 @@ const useSnake = () => {
   const resetGame = useCallback(() => {
     setFoods([]);
     setDirection(getInitialDirection());
+    setPoisons([]);
   }, []);
 
   const removeFoods = useCallback(() => {
@@ -118,6 +136,13 @@ const useSnake = () => {
       currentFoods.filter((food) => Date.now() - food.createdAt <= 10 * 1000)
     );
   }, []);
+
+  const removePoisons = useCallback(() => {
+    // only keep those poisons which were created within last 10s.
+    setPoisons((currentPoisons) => 
+      currentPoisons.filter((poison) => Date.now() - poison.createdAt <= 10 * 1000)
+    );
+  })
 
   // ?. is called optional chaining
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
@@ -132,13 +157,27 @@ const useSnake = () => {
     [snake]
   );
 
+  const isPoison = useCallback(
+    ({x, y}) => poisons.some((poison) => poison.x === x && poison.y === y),
+    [poisons]
+  )
+
   const addFood = useCallback(() => {
     let newFood = getRandomCell();
-    while (isSnake(newFood) || isFood(newFood)) {
+    while (isSnake(newFood) || isFood(newFood) || isPoison(newFood)) {
       newFood = getRandomCell();
     }
     setFoods((currentFoods) => [...currentFoods, newFood]);
-  }, [isFood, isSnake]);
+  }, [isFood, isSnake, isPoison]);
+
+  const addPoison = useCallback(() => {
+    // adds new poison after 5 second
+    let newPoison = getRandomCell();
+    while(isSnake(newPoison) || isFood(newPoison) || isPoison(newPoison)) {
+      newPoison = getRandomCell();
+    }
+    setPoisons((currentPoisons) => [...currentPoisons, newPoison]);
+  }, [isFood, isPoison, isSnake])
 
   // move the snake
   const runSingleStep = useCallback(() => {
@@ -156,8 +195,8 @@ const useSnake = () => {
       // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
       const newSnake = [newHead, ...snake];
 
-      // reset the game if the snake hit itself
-      if (isSnake(newHead)) {
+      // reset the game if the snake hit itself or hit poison
+      if (isSnake(newHead) || isPoison(newHead)) {
         resetGame();
         return getDefaultSnake();
       }
@@ -176,11 +215,13 @@ const useSnake = () => {
 
       return newSnake;
     });
-  }, [direction, isFood, isSnake, resetGame]);
+  }, [direction, isFood, isSnake, isPoison, resetGame]);
 
   useInterval(runSingleStep, 200);
   useInterval(addFood, 3000);
   useInterval(removeFoods, 100);
+  useInterval(addPoison, 5000);
+  useInterval(removePoisons, 100);
 
   useEffect(() => {
     const handleDirection = (direction, oppositeDirection) => {
@@ -231,7 +272,10 @@ const useSnake = () => {
           );
       } else if (isSnake({ x, y })) {
         type = CellType.Snake;
+      } else if (isPoison({x, y})) {
+        type = CellType.Poison;
       }
+
       cells.push(
         <Cell key={`${x}-${y}`} x={x} y={y} type={type} remaining={remaining} />
       );
