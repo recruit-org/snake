@@ -179,7 +179,7 @@ const useSnake = () => {
           cf.filter((f) => f.x !== newHead.x && f.y !== newHead.y)
         );
         if (snake.length > 3) {
-          snake.pop();
+          setSnake((snake) => snake.slice(0, snake.length - 1));
         }
       }
 
