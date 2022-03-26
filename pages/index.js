@@ -111,6 +111,21 @@ const Snake = () => {
     };
   }, []); 
 
+   // remove poison 
+   useEffect(() => {
+    const removePoison = () => {
+      setPoisons((currentPoison) =>
+        currentPoison.filter((poison) => Date.now() - poison.createdAt <= 10 * 1000)
+      );
+    };
+    const interval = setInterval(() => {
+      removePoison();
+    },500);
+    return () => {
+      clearInterval(interval);
+    };
+  }, []); 
+
   // move the snake
   useEffect(() => {
     const runSingleStep = () => {
@@ -169,7 +184,6 @@ const Snake = () => {
   };
 
   // add poison function
-
   const addPoison = () => {
     let newPoison = getRandomCell();
     while (isSnake(newPoison) || isFood(newPoison) || isPoison(newPoison)) {
@@ -190,18 +204,17 @@ const Snake = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       addNewFood();
-    }, 5000);
+    }, 2000);
     return () => {
       clearInterval(interval);
     };
   }, []);
 
   // add poison after 10 sec
-
   useEffect(() => {
     const interval = setInterval(() => {
       addPoison();
-    }, 10000);
+    }, 4000);
     return () => {
       clearInterval(interval);
     };
