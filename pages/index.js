@@ -13,6 +13,7 @@ const CellType = {
   Snake: "snake",
   Food: "food",
   Empty: "empty",
+  Poison: "poison",
 };
 
 const Direction = {
@@ -35,6 +36,13 @@ const Cell = ({ x, y, type }) => {
       case CellType.Food:
         return {
           backgroundColor: "darkorange",
+          borderRadius: 20,
+          width: 32,
+          height: 32,
+        };
+      case CellType.Poison:
+        return {
+          backgroundColor: "blue",
           borderRadius: 20,
           width: 32,
           height: 32,
@@ -62,7 +70,7 @@ const Cell = ({ x, y, type }) => {
 const getRandomCell = () => ({
   x: Math.floor(Math.random() * Config.width),
   y: Math.floor(Math.random() * Config.width),
-  createdAt: Date.now()
+  createdAt: Date.now(),
 });
 
 const Snake = () => {
@@ -77,6 +85,7 @@ const Snake = () => {
   const [snake, setSnake] = useState(getDefaultSnake());
   const [direction, setDirection] = useState(Direction.Right);
   const [foods, setFoods] = useState([{ x: 4, y: 10 }]);
+  const [poisons, setPoisons] = useState([{ x: 4, y: 10 }]);
   const [endGame, setEndGame] = useState(false);
 
   const score = snake.length - 3;
@@ -87,20 +96,21 @@ const Snake = () => {
     setDirection(Direction.Right);
   };
 
-  // remove food after 3 sec
+  // remove food 
   useEffect(() => {
-    const removeFood = () => {
-      setFoods((currentFood)=> currentFood.filter((food)=> Date.now() - food.createdAt <= 10*1000 ))
-    }
-    const interval = setTimeout(() => {
-      removeFood()
-    }, 5000)
+    const removeFoods = () => {
+      setFoods((currentFoods) =>
+        currentFoods.filter((food) => Date.now() - food.createdAt <= 10 * 1000)
+      );
+    };
+    const interval = setInterval(() => {
+      removeFoods();
+    }, 500);
     return () => {
-      clearInterval(interval)
-    }
-  },[])
+      clearInterval(interval);
+    };
+  }, []); 
 
- 
   // move the snake
   useEffect(() => {
     const runSingleStep = () => {
@@ -114,11 +124,21 @@ const Snake = () => {
         // make a new snake by extending head
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
         const newSnake = [newHead, ...snake];
-        
+
         // remove tail
         if (!isFood(newHead)) {
           newSnake.pop();
         }
+        if (isPoison(newHead)) {
+          newSnake.pop();
+
+          setPoisons((currentPoison) =>
+            currentPoison.filter(
+              (poison) => !(poison.x === newHead.x && poison.y === newHead.y)
+            )
+          );
+        }
+
         if (isSnake(newHead)) {
           setEndGame(true);
         } else {
@@ -128,7 +148,6 @@ const Snake = () => {
             )
           );
         }
-
         return newSnake;
       });
     };
@@ -138,7 +157,7 @@ const Snake = () => {
     return () => {
       clearInterval(interval);
     };
-  }, [direction, foods]);
+  }, [direction, foods,]);
 
   // food add function
   const addNewFood = () => {
@@ -147,6 +166,16 @@ const Snake = () => {
       newFood = getRandomCell();
     }
     setFoods((currentFood) => [...currentFood, newFood]);
+  };
+
+  // add poison function
+
+  const addPoison = () => {
+    let newPoison = getRandomCell();
+    while (isSnake(newPoison) || isFood(newPoison) || isPoison(newPoison)) {
+      newPoison = getRandomCell();
+    }
+    setPoisons((currentPoison) => [...currentPoison, newPoison]);
   };
 
   // update score whenever head touches a food
@@ -161,7 +190,18 @@ const Snake = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       addNewFood();
-    }, 3000);
+    }, 5000);
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
+
+  // add poison after 10 sec
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      addPoison();
+    }, 10000);
     return () => {
       clearInterval(interval);
     };
@@ -197,6 +237,9 @@ const Snake = () => {
   const isFood = ({ x, y }) =>
     foods.some((food) => food?.x === x && food?.y === y);
 
+  const isPoison = ({ x, y }) =>
+    poisons.some((poison) => poison?.x === x && poison?.y === y);
+
   const isSnake = ({ x, y }) =>
     snake.find((position) => position.x === x && position.y === y);
 
@@ -208,6 +251,8 @@ const Snake = () => {
         type = CellType.Food;
       } else if (isSnake({ x, y })) {
         type = CellType.Snake;
+      } else if (isPoison({ x, y })) {
+        type = CellType.Poison;
       }
       cells.push(<Cell key={`${x}-${y}`} x={x} y={y} type={type} />);
     }
