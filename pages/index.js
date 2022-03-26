@@ -47,6 +47,7 @@ const Cell = ({ x, y, type, remaining }) => {
           borderRadius: 5,
           width: 32,
           height: 32,
+          transform: `scale(${0.5 + remaining / 20})`,
         };
 
       default:
@@ -142,7 +143,7 @@ const useSnake = () => {
     setPoisons((currentPoisons) => 
       currentPoisons.filter((poison) => Date.now() - poison.createdAt <= 10 * 1000)
     );
-  })
+  }, [])
 
   // ?. is called optional chaining
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
@@ -274,6 +275,13 @@ const useSnake = () => {
         type = CellType.Snake;
       } else if (isPoison({x, y})) {
         type = CellType.Poison;
+        remaining = 
+          10 - 
+          Math.round(
+            (Date.now() - 
+              poisons.find((poison) => poison.x === x && poison.y === y).createdAt) /
+              1000
+          );
       }
 
       cells.push(
