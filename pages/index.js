@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import styles from "../styles/Snake.module.css";
 
 const Config = {
@@ -61,7 +61,22 @@ const Cell = ({ x, y, type }) => {
 const getRandomCell = () => ({
   x: Math.floor(Math.random() * Config.width),
   y: Math.floor(Math.random() * Config.width),
+  createdAt: Date.now(),
 });
+
+const useInterval = (callback, delay) => {
+  const time = useRef(0);
+  const wrappedCallback = useCallback(() => {
+    if (Date.now() - time.current >= delay) {
+      time.current = Date.now();
+      callback();
+    }
+  }, [callback, delay]);
+  useEffect(() => {
+    const interval = setInterval(wrappedCallback, 1000 / 60);
+    return () => clearInterval(interval);
+  }, [wrappedCallback]);
+};
 
 const useSnake = () => {
   const getDefaultSnake = () => [
@@ -77,83 +92,70 @@ const useSnake = () => {
   const [foods, setFoods] = useState([{ x: 4, y: 10 }]);
   const score = snake.length - 3;
 
-  const resetGame = () => {
+  const resetGame = useCallback(() => {
     setSnake(getDefaultSnake());
     setDirection(Direction.Right);
     setFoods([{ x: 4, y: 10 }]);
-  };
+  }, []);
+  //helper function for removing food
+  const removeFood = useCallback(() => {
+    setFoods((fs) => fs.filter((f) => Date.now() - f.createdAt <= 10 * 1000));
+  }, []);
+  // ?. is called optional chaining
+  // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
+  const isFood = useCallback(
+    ({ x, y }) => foods.some((food) => food.x === x && food.y === y),
+    [foods]
+  );
 
-  // move the snake
-  useEffect(() => {
-    const runSingleStep = () => {
-      setSnake((snake) => {
-        const head = snake[0];
-        const newHead = {
-          x: (head.x + direction.x + Config.width) % Config.width,
-          y: (head.y + direction.y + Config.height) % Config.height,
-        };
-
-        // make a new snake by extending head
-        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
-        const newSnake = [newHead, ...snake];
-
-        if (!isFood(newHead)) {
-          newSnake.pop();
-        }
-        if (isSnake(newHead)) {
-          resetGame();
-        }
-
-        return newSnake;
-      });
-    };
-
-    runSingleStep();
-    const timer = setInterval(runSingleStep, 500);
-
-    return () => clearInterval(timer);
-  }, [direction, foods]);
-
+  const isSnake = useCallback(
+    ({ x, y }) =>
+      snake.find((position) => position.x === x && position.y === y),
+    [snake]
+  );
   //helper function for adding new food
-  const addNewFood = () => {
+  const addNewFood = useCallback(() => {
     let newFood = getRandomCell();
-    while (isSnake(newFood)) {
+    while (isSnake(newFood) || isFood(newFood)) {
       newFood = getRandomCell();
     }
 
     setFoods((fs) => [...fs, newFood]);
-  };
+  }, [isSnake, isFood]);
 
-  //helper function for removing food
-  const removeFood = () => {
-    setFoods((fs) => fs.slice(1));
-  };
+  // move the snake
+  const runSingleStep = useCallback(() => {
+    setSnake((snake) => {
+      const head = snake[0];
+      const newHead = {
+        x: (head.x + direction.x + Config.width) % Config.width,
+        y: (head.y + direction.y + Config.height) % Config.height,
+      };
 
-  // update score whenever head touches a food
-  useEffect(() => {
-    const head = snake[0];
-    if (isFood(head)) {
-      // remove the eaten food
-      setFoods((fs) => fs.filter((f) => f.x !== head.x && f.y !== head.y));
-      addNewFood();
-    }
-  }, [snake]);
+      // make a new snake by extending head
+      // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
+      const newSnake = [newHead, ...snake];
 
-  //adding new food after 3 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      addNewFood();
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
+      // check if snake is eating food
+      if (!isFood(newHead)) {
+        newSnake.pop();
+      } else {
+        setFoods((cf) =>
+          cf.filter((f) => f.x !== newHead.x && f.y !== newHead.y)
+        );
+      }
+      // check if snake is eating itself
+      if (isSnake(newHead)) {
+        resetGame();
+      }
 
-  //removing oldest food after 10 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      removeFood();
-    }, 10000);
-    return () => clearInterval(interval);
-  }, []);
+      return newSnake;
+    });
+  }, [direction, resetGame, isSnake, isFood]);
+
+  useInterval(runSingleStep, 200);
+  useInterval(addNewFood, 3000);
+  useInterval(removeFood, 100);
 
   useEffect(() => {
     const handleKey = (direction, oppositeDirection) => {
@@ -187,28 +189,6 @@ const useSnake = () => {
 
     return () => window.removeEventListener("keydown", handleNavigation);
   }, []);
-
-  // ?. is called optional chaining
-  // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
-  const isFood = ({ x, y }) =>
-    foods.some((food) => food.x === x && food.y === y);
-  // const isFood = ({ x, y }) =>
-  // foods.some((food, i) => {
-  //   if (food.x === x && food.y === y) {
-  //     setFoods((fs) => fs.filter((f, j) => i !== j));
-  //     return true;
-  //   }
-  //   return false;
-  // });
-
-  const isSnake = ({ x, y }) =>
-    snake.find((position) => position.x === x && position.y === y);
-
-  return { score, isFood, isSnake };
-};
-
-const Snake = () => {
-  const { score, isFood, isSnake } = useSnake();
   const cells = [];
   for (let x = 0; x < Config.width; x++) {
     for (let y = 0; y < Config.height; y++) {
@@ -221,6 +201,12 @@ const Snake = () => {
       cells.push(<Cell key={`${x}-${y}`} x={x} y={y} type={type} />);
     }
   }
+
+  return { score, isFood, isSnake, cells };
+};
+
+const Snake = () => {
+  const { score, cells } = useSnake();
 
   return (
     <div className={styles.container}>
