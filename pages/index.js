@@ -3,14 +3,15 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import styles from "../styles/Snake.module.css";
 
 const Config = {
-  height: 20,
-  width: 20,
+  height: 25,
+  width: 25,
   cellSize: 32,
 };
 
 const CellType = {
   Snake: "snake",
   Food: "food",
+  Poison: "poison",
   Empty: "empty",
 };
 
@@ -21,7 +22,7 @@ const Direction = {
   Bottom: { x: 0, y: 1 },
 };
 
-const Cell = ({ x, y, type }) => {
+const Cell = ({ x, y, type, remaining }) => {
   const getStyles = () => {
     switch (type) {
       case CellType.Snake:
@@ -33,10 +34,19 @@ const Cell = ({ x, y, type }) => {
 
       case CellType.Food:
         return {
-          backgroundColor: "darkorange",
+          backgroundColor: "tomato",
           borderRadius: 20,
           width: 32,
           height: 32,
+          transform: `scale(${0.5 + remaining / 20})`,
+        };
+      case CellType.Poison:
+        return {
+          backgroundColor: "red",
+          borderRadius: 20,
+          width: 32,
+          height: 32,
+          transform: `scale(${0.5 + remaining / 20})`,
         };
 
       default:
@@ -53,7 +63,9 @@ const Cell = ({ x, y, type }) => {
         height: Config.cellSize,
       }}
     >
-      <div className={styles.cell} style={getStyles()}></div>
+      <div className={styles.cell} style={getStyles()}>
+        {remaining}
+      </div>
     </div>
   );
 };
@@ -90,6 +102,7 @@ const useSnake = () => {
   const [direction, setDirection] = useState(Direction.Right);
 
   const [foods, setFoods] = useState([{ x: 4, y: 10 }]);
+  const [poison, setPoison] = useState([]);
   const score = snake.length - 3;
 
   const resetGame = useCallback(() => {
@@ -107,6 +120,10 @@ const useSnake = () => {
     ({ x, y }) => foods.some((food) => food.x === x && food.y === y),
     [foods]
   );
+  const isPoison = useCallback(
+    ({ x, y }) => poison.some((p) => p.x === x && p.y === y),
+    [poison]
+  );
 
   const isSnake = useCallback(
     ({ x, y }) =>
@@ -122,6 +139,15 @@ const useSnake = () => {
 
     setFoods((fs) => [...fs, newFood]);
   }, [isSnake, isFood]);
+  //helper function for adding new food
+  const addNewPoison = useCallback(() => {
+    let newPoison = getRandomCell();
+    while (isSnake(newPoison) || isFood(newPoison) || isPoison(newPoison)) {
+      newPoison = getRandomCell();
+    }
+
+    setPoison((fs) => [...fs, newPoison]);
+  }, [isSnake, isFood, isPoison]);
 
   // move the snake
   const runSingleStep = useCallback(() => {
@@ -139,7 +165,7 @@ const useSnake = () => {
       // check if snake is eating food
       if (!isFood(newHead)) {
         newSnake.pop();
-      } else {
+      } else if (isFood(newHead)) {
         setFoods((cf) =>
           cf.filter((f) => f.x !== newHead.x && f.y !== newHead.y)
         );
@@ -148,13 +174,22 @@ const useSnake = () => {
       if (isSnake(newHead)) {
         resetGame();
       }
+      if (isPoison(newHead)) {
+        setPoison((cf) =>
+          cf.filter((f) => f.x !== newHead.x && f.y !== newHead.y)
+        );
+        if (snake.length > 3) {
+          snake.pop();
+        }
+      }
 
       return newSnake;
     });
-  }, [direction, resetGame, isSnake, isFood]);
+  }, [direction, resetGame, isSnake, isFood, isPoison]);
 
   useInterval(runSingleStep, 200);
   useInterval(addNewFood, 3000);
+  useInterval(addNewPoison, 5000);
   useInterval(removeFood, 100);
 
   useEffect(() => {
@@ -192,13 +227,25 @@ const useSnake = () => {
   const cells = [];
   for (let x = 0; x < Config.width; x++) {
     for (let y = 0; y < Config.height; y++) {
-      let type = CellType.Empty;
+      let type = CellType.Empty,
+        remaining = undefined;
       if (isFood({ x, y })) {
         type = CellType.Food;
+        remaining =
+          10 -
+          Math.round(
+            (Date.now() -
+              foods.find((food) => food.x === x && food.y === y).createdAt) /
+              1000
+          );
       } else if (isSnake({ x, y })) {
         type = CellType.Snake;
+      } else if (isPoison({ x, y })) {
+        type = CellType.Poison;
       }
-      cells.push(<Cell key={`${x}-${y}`} x={x} y={y} type={type} />);
+      cells.push(
+        <Cell key={`${x}-${y}`} x={x} y={y} type={type} remaining={remaining} />
+      );
     }
   }
 
