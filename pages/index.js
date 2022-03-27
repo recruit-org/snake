@@ -1,5 +1,6 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState, useRef } from "react";
+import { useCallback } from "react/cjs/react.production.min";
 import styles from "../styles/Snake.module.css";
 
 const Config = {
@@ -12,6 +13,7 @@ const CellType = {
   Snake: "snake",
   Food: "food",
   Empty: "empty",
+  Poison: "poison",
 };
 
 const Direction = {
@@ -34,6 +36,13 @@ const Cell = ({ x, y, type }) => {
       case CellType.Food:
         return {
           backgroundColor: "darkorange",
+          borderRadius: 20,
+          width: 32,
+          height: 32,
+        };
+      case CellType.Poison:
+        return {
+          backgroundColor: "blue",
           borderRadius: 20,
           width: 32,
           height: 32,
@@ -61,6 +70,7 @@ const Cell = ({ x, y, type }) => {
 const getRandomCell = () => ({
   x: Math.floor(Math.random() * Config.width),
   y: Math.floor(Math.random() * Config.width),
+  createdAt: Date.now(),
 });
 
 const Snake = () => {
@@ -69,55 +79,133 @@ const Snake = () => {
     { x: 7, y: 12 },
     { x: 6, y: 12 },
   ];
-  const grid = useRef();
+  // const grid = useRef();
 
   // snake[0] is head and snake[snake.length - 1] is tail
   const [snake, setSnake] = useState(getDefaultSnake());
   const [direction, setDirection] = useState(Direction.Right);
+  const [foods, setFoods] = useState([{ x: 4, y: 10 }]);
+  const [poisons, setPoisons] = useState([{ x: 4, y: 10 }]);
+  const [endGame, setEndGame] = useState(false);
 
-  const [food, setFood] = useState({ x: 4, y: 10 });
-  const [score, setScore] = useState(0);
+  const score = snake.length - 3;
+
+  // restart the game
+  const reStartGame = () => {
+    setSnake(getDefaultSnake());
+    setDirection(Direction.Right);
+  };
+
+  // remove food 
+  useEffect(() => {
+    const removeFoods = () => {
+      setFoods((currentFoods) =>
+        currentFoods.filter((food) => Date.now() - food.createdAt <= 10 * 1000)
+      );
+    };
+    const interval = setInterval(() => {
+      removeFoods();
+    }, 500);
+    return () => {
+      clearInterval(interval);
+    };
+  }, []); 
 
   // move the snake
   useEffect(() => {
     const runSingleStep = () => {
       setSnake((snake) => {
         const head = snake[0];
-        const newHead = { x: head.x + direction.x, y: head.y + direction.y };
+        const newHead = {
+          x: (head.x + direction.x + Config.width) % Config.width,
+          y: (head.y + direction.y + Config.height) % Config.height,
+        };
 
         // make a new snake by extending head
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
         const newSnake = [newHead, ...snake];
 
         // remove tail
-        newSnake.pop();
+        if (!isFood(newHead)) {
+          newSnake.pop();
+        }
+        if (isPoison(newHead)) {
+          newSnake.pop();
 
+          setPoisons((currentPoison) =>
+            currentPoison.filter(
+              (poison) => !(poison.x === newHead.x && poison.y === newHead.y)
+            )
+          );
+        }
+
+        if (isSnake(newHead)) {
+          setEndGame(true);
+        } else {
+          setFoods((currentFoods) =>
+            currentFoods.filter(
+              (food) => !(food.x === newHead.x && food.y === newHead.y)
+            )
+          );
+        }
         return newSnake;
       });
     };
+    const interval = setInterval(() => {
+      runSingleStep();
+    }, 200);
+    return () => {
+      clearInterval(interval);
+    };
+  }, [direction, foods,]);
 
-    runSingleStep();
-    const timer = setInterval(runSingleStep, 500);
+  // food add function
+  const addNewFood = () => {
+    let newFood = getRandomCell();
+    while (isSnake(newFood) || isFood(newFood)) {
+      newFood = getRandomCell();
+    }
+    setFoods((currentFood) => [...currentFood, newFood]);
+  };
 
-    return () => clearInterval(timer);
-  }, [direction, food]);
+  // add poison function
+
+  const addPoison = () => {
+    let newPoison = getRandomCell();
+    while (isSnake(newPoison) || isFood(newPoison) || isPoison(newPoison)) {
+      newPoison = getRandomCell();
+    }
+    setPoisons((currentPoison) => [...currentPoison, newPoison]);
+  };
 
   // update score whenever head touches a food
   useEffect(() => {
     const head = snake[0];
     if (isFood(head)) {
-      setScore((score) => {
-        return score + 1;
-      });
-
-      let newFood = getRandomCell();
-      while (isSnake(newFood)) {
-        newFood = getRandomCell();
-      }
-
-      setFood(newFood);
+      addNewFood();
     }
   }, [snake]);
+
+  // Add new food after 5 sec
+  useEffect(() => {
+    const interval = setInterval(() => {
+      addNewFood();
+    }, 5000);
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
+
+  // add poison after 10 sec
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      addPoison();
+    }, 10000);
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     const handleNavigation = (event) => {
@@ -146,7 +234,11 @@ const Snake = () => {
 
   // ?. is called optional chaining
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
-  const isFood = ({ x, y }) => food?.x === x && food?.y === y;
+  const isFood = ({ x, y }) =>
+    foods.some((food) => food?.x === x && food?.y === y);
+
+  const isPoison = ({ x, y }) =>
+    poisons.some((poison) => poison?.x === x && poison?.y === y);
 
   const isSnake = ({ x, y }) =>
     snake.find((position) => position.x === x && position.y === y);
@@ -159,6 +251,8 @@ const Snake = () => {
         type = CellType.Food;
       } else if (isSnake({ x, y })) {
         type = CellType.Snake;
+      } else if (isPoison({ x, y })) {
+        type = CellType.Poison;
       }
       cells.push(<Cell key={`${x}-${y}`} x={x} y={y} type={type} />);
     }
@@ -179,7 +273,17 @@ const Snake = () => {
           width: Config.width * Config.cellSize,
         }}
       >
-        {cells}
+        {/* {cells} */}
+        <div style={{ textAlign: "center", fontSize: "30px" }}>
+          {endGame ? (
+            <>
+              <h5>Game Over</h5>
+              <h5>your score is: {score}</h5>
+            </>
+          ) : (
+            cells
+          )}
+        </div>
       </div>
     </div>
   );
