@@ -61,7 +61,7 @@ const Cell = ({ x, y, type }) => {
 const getRandomCell = () => ({
   x: Math.floor(Math.random() * Config.width),
   y: Math.floor(Math.random() * Config.width),
-  start: Math.floor(Math.random()*100),
+  start: Date.now(),
 });
 
 //custom hook
@@ -81,49 +81,62 @@ const UseSnake = () => {
   const [foods, setFoods] = useState([]);
   const score = snake.length - 3;
 
-    // ?. is called optional chaining
-  const isFood = useCallback(({ x, y }) =>
-    foods.find((position) => position.x === x && position.y === y),[foods]);
+  // ?. is called optional chaining
+  const isFood = useCallback(
+    ({ x, y }) =>
+      foods.find((position) => position.x === x && position.y === y),
+    [foods]
+  );
 
-  const isSnake = useCallback(({ x, y }) =>
-    snake.find((position) => position.x === x && position.y === y),[snake]);
-
+  const isSnake = useCallback(
+    ({ x, y }) =>
+      snake.find((position) => position.x === x && position.y === y),
+    [snake]
+  );
+  //restart the game
   const resetGame = useCallback(() => {
     setSnake(getDefaultSnake());
     setDirection(Direction.Right);
     setFoods([]);
-  },[]);
-  // move the snake
-  useEffect(() => {
-    const runSingleStep = () => {
-      setSnake((snake) => {
-        const head = snake[0];
-        const newHead = {
-          x: (head.x + direction.x + Config.width) % Config.width,
-          y: (head.y + direction.y + Config.height) % Config.height,
-        };
+  }, []);
+  //moving the snake
+  const runSingleStep = useCallback(() => {
+    setSnake((snake) => {
+      const head = snake[0];
+      const newHead = {
+        x: (head.x + direction.x + Config.width) % Config.width,
+        y: (head.y + direction.y + Config.height) % Config.height,
+      };
 
-        // make a new snake by extending head
-        const newSnake = [newHead, ...snake];
+      // make a new snake by extending head
+      const newSnake = [newHead, ...snake];
 
-        // remove tail when head doesnt eat food
-        if (!isFood(newHead)) {
-          newSnake.pop();
-        }
-        if (isSnake(newHead)) {
-          resetGame();
-        }
+      // remove tail when head doesnt eat food
+      if (!isFood(newHead)) {
+        newSnake.pop();
+      }
+      if (isSnake(newHead)) {
+        resetGame();
+      }
 
-        return newSnake;
-      });
-    };
+      return newSnake;
+    });
+  }, [direction.x, direction.y, isFood, isSnake, resetGame]);
 
-    runSingleStep();
-    const timer = setInterval(runSingleStep, 300);
-
-    return () => clearInterval(timer);
-  }, [direction, isFood, isSnake, resetGame]);
-
+  //add new food
+  const addFood = () => {
+    let newFood = getRandomCell();
+    while (isSnake(newFood) || isFood(newFood)) {
+      newFood = getRandomCell();
+    }
+    setFoods((currentFoods) => [...currentFoods, newFood]);
+  };
+//remove food
+const removeFood = useCallback(()=>{
+  setFoods((currentFoods)=> {
+    currentFoods.filter((food) => Date.now() - food.start <10000)
+  })
+},[setFoods])
   // update score whenever head touches a food
   useEffect(() => {
     const head = snake[0];
@@ -134,25 +147,24 @@ const UseSnake = () => {
     }
   }, [isFood, snake]);
 
-  //food after 3s
-  useEffect(() => {
-    const interval = setInterval(() => {
-      let newFood = getRandomCell();
-      while (isSnake(newFood) || isFood(newFood)) {
-        newFood = getRandomCell();
+  const UseInterval = (func, dir) => {
+    const timer = useRef(Date.now());
+    const createCallback = useCallback(() => {
+      if (Date.now() - timer.current > dir) {
+        timer.current = Date.now();
+        func();
       }
-      setFoods((currentFoods) => [...currentFoods, newFood]);
-      // setTimeout(() => {
-      //   setFoods((f) =>
-      //     f.filter(
-      //       (e) =>
-      //        e.start!==newFood.start
-      //     )
-      //   );
-      // },10*1000);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
+    }, [dir, func]);
+
+    useEffect(() => {
+      const interval = setInterval(createCallback, 1000 / 60);
+      return () => clearInterval(interval);
+    }, [createCallback]);
+  };
+
+  UseInterval(addFood, 3000);
+  UseInterval(runSingleStep, 300);
+  UseInterval(removeFood,5000);
 
   const changeDir = (checkDir, newDir) => {
     setDirection((direction) => {
@@ -185,7 +197,6 @@ const UseSnake = () => {
 
     return () => window.removeEventListener("keydown", handleNavigation);
   }, []);
-
 
   return { score, isFood, isSnake };
 };
