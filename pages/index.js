@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import styles from "../styles/Snake.module.css";
 
 const Config = {
@@ -81,11 +81,18 @@ const UseSnake = () => {
   const [foods, setFoods] = useState([]);
   const score = snake.length - 3;
 
-  const resetGame = () => {
+    // ?. is called optional chaining
+  const isFood = useCallback(({ x, y }) =>
+    foods.find((position) => position.x === x && position.y === y),[foods]);
+
+  const isSnake = useCallback(({ x, y }) =>
+    snake.find((position) => position.x === x && position.y === y),[snake]);
+
+  const resetGame = useCallback(() => {
     setSnake(getDefaultSnake());
     setDirection(Direction.Right);
     setFoods([]);
-  };
+  },[]);
   // move the snake
   useEffect(() => {
     const runSingleStep = () => {
@@ -115,7 +122,7 @@ const UseSnake = () => {
     const timer = setInterval(runSingleStep, 300);
 
     return () => clearInterval(timer);
-  }, [direction]);
+  }, [direction, isFood, isSnake, resetGame]);
 
   // update score whenever head touches a food
   useEffect(() => {
@@ -125,7 +132,7 @@ const UseSnake = () => {
         currentFoods.filter((food) => food.x !== head.x && food.y !== head.y)
       );
     }
-  }, [snake]);
+  }, [isFood, snake]);
 
   //food after 3s
   useEffect(() => {
@@ -135,14 +142,14 @@ const UseSnake = () => {
         newFood = getRandomCell();
       }
       setFoods((currentFoods) => [...currentFoods, newFood]);
-      setTimeout(() => {
-        setFoods((f) =>
-          f.filter(
-            (e) =>
-             e.start!==newFood.start
-          )
-        );
-      },10*1000);
+      // setTimeout(() => {
+      //   setFoods((f) =>
+      //     f.filter(
+      //       (e) =>
+      //        e.start!==newFood.start
+      //     )
+      //   );
+      // },10*1000);
     }, 3000);
     return () => clearInterval(interval);
   }, []);
@@ -179,12 +186,6 @@ const UseSnake = () => {
     return () => window.removeEventListener("keydown", handleNavigation);
   }, []);
 
-  // ?. is called optional chaining
-  const isFood = ({ x, y }) =>
-    foods.find((position) => position.x === x && position.y === y);
-
-  const isSnake = ({ x, y }) =>
-    snake.find((position) => position.x === x && position.y === y);
 
   return { score, isFood, isSnake };
 };
