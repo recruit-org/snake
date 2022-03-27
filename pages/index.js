@@ -1,6 +1,5 @@
 import dynamic from "next/dynamic";
-import { useEffect, useState, useRef } from "react";
-import { useCallback } from "react/cjs/react.production.min";
+import { useEffect, useState, useRef, useCallback } from "react";
 import styles from "../styles/Snake.module.css";
 
 const Config = {
@@ -90,41 +89,26 @@ const Snake = () => {
 
   const score = snake.length - 3;
 
+  // setInterval function
+  const useInterval = (callback, duration) => {
+    const time = useRef(0);
+    const wrappedCallback = useCallback(() => {
+      if (Date.now() - time.current >= duration) {
+        time.current = Date.now();
+        callback();
+      }
+    }, [callback, duration]);
+    useEffect(() => {
+      const interval = setInterval(wrappedCallback, 1000 / 60);
+      return () => clearInterval(interval);
+    }, [wrappedCallback, duration]);
+  };
+
   // restart the game
   const reStartGame = () => {
     setSnake(getDefaultSnake());
     setDirection(Direction.Right);
   };
-
-  // remove food 
-  useEffect(() => {
-    const removeFoods = () => {
-      setFoods((currentFoods) =>
-        currentFoods.filter((food) => Date.now() - food.createdAt <= 10 * 1000)
-      );
-    };
-    const interval = setInterval(() => {
-      removeFoods();
-    }, 500);
-    return () => {
-      clearInterval(interval);
-    };
-  }, []); 
-
-   // remove poison 
-   useEffect(() => {
-    const removePoison = () => {
-      setPoisons((currentPoison) =>
-        currentPoison.filter((poison) => Date.now() - poison.createdAt <= 10 * 1000)
-      );
-    };
-    const interval = setInterval(() => {
-      removePoison();
-    },500);
-    return () => {
-      clearInterval(interval);
-    };
-  }, []); 
 
   // move the snake
   useEffect(() => {
@@ -172,7 +156,7 @@ const Snake = () => {
     return () => {
       clearInterval(interval);
     };
-  }, [direction, foods,]);
+  }, [direction, foods]);
 
   // food add function
   const addNewFood = () => {
@@ -200,25 +184,27 @@ const Snake = () => {
     }
   }, [snake]);
 
-  // Add new food after 5 sec
-  useEffect(() => {
-    const interval = setInterval(() => {
-      addNewFood();
-    }, 2000);
-    return () => {
-      clearInterval(interval);
-    };
+  // remove foods
+  const removeFoods = useCallback(() => {
+    setFoods((currentFoods) =>
+      currentFoods.filter((food) => Date.now() - food.createdAt <= 10 * 1000)
+    );
   }, []);
 
-  // add poison after 10 sec
-  useEffect(() => {
-    const interval = setInterval(() => {
-      addPoison();
-    }, 4000);
-    return () => {
-      clearInterval(interval);
-    };
+  // remove poison
+  const removePoison = useCallback(() => {
+    setPoisons((currentPoison) =>
+      currentPoison.filter(
+        (poison) => Date.now() - poison.createdAt <= 10 * 1000
+      )
+    );
   }, []);
+
+  // Interval
+  useInterval(addNewFood, 3000);
+  useInterval(addPoison, 6000);
+  useInterval(removeFoods, 5000);
+  useInterval(removePoison, 8000);
 
   useEffect(() => {
     const handleNavigation = (event) => {
