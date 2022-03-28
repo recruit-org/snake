@@ -1,5 +1,6 @@
 import dynamic from "next/dynamic";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef,useCallback } from "react";
+// import { useCallback } from "react/cjs/react.production.min";
 import styles from "../styles/Snake.module.css";
 
 const Config = {
@@ -61,6 +62,7 @@ const Cell = ({ x, y, type }) => {
 const getRandomCell = () => ({
   x: Math.floor(Math.random() * Config.width),
   y: Math.floor(Math.random() * Config.width),
+  createTime:Date.now(),
 });
 
       
@@ -77,22 +79,24 @@ const getRandomCell = () => ({
           const [snake, setSnake] = useState(getDefaultSnake());
           const [direction, setDirection] = useState(Direction.Right);
         
-          const [foods, setFoods] = useState([{ x: 4, y: 10 }]);
+          const [foods, setFoods] = useState([{ x: 4, y: 10,createTime:Date.now() }]);
           const score =snake.length-3;
 
-          const resetGame = () =>{
+          const resetGame = useCallback(() =>{
             setSnake(getDefaultSnake());
             setDirection(Direction.Right)
-          }
-          const addNewFood =() =>{
+          },[]);
+          const addNewFood =useCallback(() =>{
             let newFood = getRandomCell();
             while (isSnake(newFood) || isFood(newFood)) {
               newFood = getRandomCell();
             }
            
             setFoods( (CurrentFoods) =>[...CurrentFoods, newFood]);
-          }
-        
+          },[]);
+        const removeEachFood = () =>{
+          setFoods((currentFoods) => currentFoods.filter(food => Date.now() - food.createTime <= 10*1000) )
+        }
           // move the snake
           useEffect(() => {
             const runSingleStep = () => {
@@ -114,8 +118,7 @@ const getRandomCell = () => ({
                 if(isSnake(newHead)){
                   resetGame()
                 }
-              
-        
+               
                 return newSnake;
               });
             };
@@ -124,7 +127,7 @@ const getRandomCell = () => ({
             const timer = setInterval(runSingleStep, 500);
         
             return () => clearInterval(timer);
-          }, [direction, foods]);
+          }, [direction, foods,resetGame]);
         
 
           useEffect(() => {
@@ -135,6 +138,13 @@ const getRandomCell = () => ({
               // });
         
              addNewFood()            }
+          //   let newFood = getRandomCell();
+          //   while (isSnake(newFood)) {
+          //     newFood = getRandomCell();
+          //   }
+          //   setFoods(newFood)
+          // }
+         
           
            } ,[snake]);
 // difference between setinerval and set timeout ....and  array.find and some 
@@ -144,14 +154,15 @@ const getRandomCell = () => ({
        addNewFood()
         },3*1000  )
         return() => {clearInterval(interval) }
-    } ,[] ) 
+    } ,[addNewFood] ) 
 
     useEffect(() => {
-      const disappear = setTimeout(() => {
-        // console.log('This will run after 1 second!')
-      setFoods
-      }, 10*1000);
-      return () => clearTimeout(disappear);
+      const disappearFood = setInterval(()=> {
+        removeEachFood()
+      
+    
+      }, 1000);
+      return () => clearInterval(disappearFood);
     }, []);
     
 
@@ -193,7 +204,7 @@ const getRandomCell = () => ({
               // ?. is called optional chaining
               // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
               const isFood = ({ x, y }) => foods.some((food)=>food.x === x && food.y === y);
-              
+              console.log(isFood)
               const isSnake = ({ x, y }) =>
               snake.find((position) => position.x === x && position.y === y);
         //  console.log(isSnake,snake)
