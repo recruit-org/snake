@@ -74,6 +74,20 @@ const getRandomCell = () => ({
 
 //custom hook
 //controller
+const UseInterval = (func, dir) => {
+  const timer = useRef(Date.now());
+  const createCallback = useCallback(() => {
+    if (Date.now() - timer.current > dir) {
+      timer.current = Date.now();
+      func();
+    }
+  }, [dir, func]);
+
+  useEffect(() => {
+    const interval = setInterval(createCallback, 1000 / 60);
+    return () => clearInterval(interval);
+  }, [createCallback]);
+};
 const UseSnake = () => {
   const getDefaultSnake = () => [
     { x: 8, y: 12 },
@@ -193,21 +207,6 @@ const UseSnake = () => {
       );
     }
   }, [isFood, isPoison, snake]);
-
-  const UseInterval = (func, dir) => {
-    const timer = useRef(Date.now());
-    const createCallback = useCallback(() => {
-      if (Date.now() - timer.current > dir) {
-        timer.current = Date.now();
-        func();
-      }
-    }, [dir, func]);
-
-    useEffect(() => {
-      const interval = setInterval(createCallback, 1000 / 60);
-      return () => clearInterval(interval);
-    }, [createCallback]);
-  };
 
   UseInterval(addFood, 2000);
   UseInterval(runSingleStep, 300);
