@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import styles from "../styles/Snake.module.css";
 
 const Config = {
@@ -34,6 +34,14 @@ const Cell = ({ x, y, type }) => {
       case CellType.Food:
         return {
           backgroundColor: "darkorange",
+          borderRadius: 20,
+          width: 32,
+          height: 32,
+        };
+
+      case CellType.Poison:
+        return {
+          backgroundColor: "red",
           borderRadius: 20,
           width: 32,
           height: 32,
@@ -77,8 +85,8 @@ const UseSnake = () => {
   // snake[0] is head and snake[snake.length - 1] is tail
   const [snake, setSnake] = useState(getDefaultSnake());
   const [direction, setDirection] = useState(Direction.Right);
-
   const [foods, setFoods] = useState([]);
+  const [poisons, setPoison] = useState([]);
   const score = snake.length - 3;
 
   // ?. is called optional chaining
@@ -88,17 +96,26 @@ const UseSnake = () => {
     [foods]
   );
 
+  const isPoison = useCallback(
+    ({ x, y }) =>
+      poisons.find((position) => position.x === x && position.y === y),
+    [poisons]
+  );
+
   const isSnake = useCallback(
     ({ x, y }) =>
       snake.find((position) => position.x === x && position.y === y),
     [snake]
   );
+
   //restart the game
   const resetGame = useCallback(() => {
     setSnake(getDefaultSnake());
     setDirection(Direction.Right);
     setFoods([]);
+    setPoison([]);
   }, []);
+
   //moving the snake
   const runSingleStep = useCallback(() => {
     setSnake((snake) => {
@@ -115,37 +132,67 @@ const UseSnake = () => {
       if (!isFood(newHead)) {
         newSnake.pop();
       }
-      if (isSnake(newHead)) {
+      //remove again when eats poison
+      if (isPoison(newHead)) {
+        newSnake.pop();
+      }
+      if (isSnake(newHead) || score < 0) {
         resetGame();
       }
 
       return newSnake;
     });
-  }, [direction.x, direction.y, isFood, isSnake, resetGame]);
+  }, [direction.x, direction.y, isFood, isPoison, isSnake, resetGame, score]);
 
   //add new food
   const addFood = () => {
     let newFood = getRandomCell();
-    while (isSnake(newFood) || isFood(newFood)) {
+    while (isSnake(newFood) || isFood(newFood) || isPoison(newFood)) {
       newFood = getRandomCell();
     }
     setFoods((currentFoods) => [...currentFoods, newFood]);
   };
-//remove food
-const removeFood = useCallback(()=>{
-  setFoods((currentFoods)=> {
-    currentFoods.filter((food) => Date.now() - food.start <10000)
-  })
-},[setFoods])
-  // update score whenever head touches a food
+
+  //add poison
+  const addPoison = () => {
+    let newPoison = getRandomCell();
+    while (isSnake(newPoison) || isFood(newPoison) || isPoison(newPoison)) {
+      newPoison = getRandomCell();
+    }
+    setPoison((currentPoison) => [...currentPoison, newPoison]);
+  };
+
+  //remove food
+  const removeFood = useCallback(() => {
+    console.log("delete");
+    setFoods((currentFoods) =>
+      currentFoods.filter((food) => Date.now() - food.start < 10000)
+    );
+  }, []);
+  //remove poison
+  const removePoison = useCallback(() => {
+    setPoison((currentPoison) =>
+      currentPoison.filter((poison) => Date.now() - poison.start < 10000)
+    );
+  }, []);
+
+  // update foods and poisons whenever head touches a food or a poison
   useEffect(() => {
     const head = snake[0];
     if (isFood(head)) {
+      console.log("ate food");
       setFoods((currentFoods) =>
         currentFoods.filter((food) => food.x !== head.x && food.y !== head.y)
       );
     }
-  }, [isFood, snake]);
+    if (isPoison(head)) {
+      setPoison((currentPoison) =>
+        currentPoison.filter(
+          (poison) => poison.x !== head.x && poison.y !== head.y
+        )
+      );
+    }
+  }, [isFood, isPoison, snake]);
 
   const UseInterval = (func, dir) => {
     const timer = useRef(Date.now());
@@ -162,9 +209,11 @@ const removeFood = useCallback(()=>{
     }, [createCallback]);
   };
 
-  UseInterval(addFood, 3000);
+  UseInterval(addFood, 2000);
   UseInterval(runSingleStep, 300);
-  UseInterval(removeFood,5000);
+  UseInterval(removeFood, 50);
+  UseInterval(addPoison, 4000);
+  UseInterval(removePoison, 100);
 
   const changeDir = (checkDir, newDir) => {
     setDirection((direction) => {
@@ -198,12 +247,12 @@ const removeFood = useCallback(()=>{
     return () => window.removeEventListener("keydown", handleNavigation);
   }, []);
 
-  return { score, isFood, isSnake };
+  return { score, isFood, isSnake, isPoison };
 };
 
 //view
 const Snake = () => {
-  const { score, isFood, isSnake } = UseSnake();
+  const { score, isFood, isSnake, isPoison } = UseSnake();
   const cells = [];
   for (let x = 0; x < Config.width; x++) {
     for (let y = 0; y < Config.height; y++) {
@@ -212,6 +261,8 @@ const Snake = () => {
         type = CellType.Food;
       } else if (isSnake({ x, y })) {
         type = CellType.Snake;
+      } else if (isPoison({ x, y })) {
+        type = CellType.Poison;
       }
       cells.push(<Cell key={`${x}-${y}`} x={x} y={y} type={type} />);
     }
