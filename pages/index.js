@@ -178,15 +178,16 @@ const UseSnake = () => {
 
   //remove food
   const removeFood = useCallback(() => {
-    console.log("delete");
+    // console.log("delete food auto");
     setFoods((currentFoods) =>
-      currentFoods.filter((food) => Date.now() - food.start < 10000)
+      currentFoods.filter((food) => (Date.now() - food.start) < 10000)
     );
   }, []);
   //remove poison
   const removePoison = useCallback(() => {
+    // console.log("delete poison auto");
     setPoison((currentPoison) =>
-      currentPoison.filter((poison) => Date.now() - poison.start < 10000)
+      currentPoison.filter((poison) => (Date.now() - poison.start) < 10000)
     );
   }, []);
 
@@ -200,6 +201,7 @@ const UseSnake = () => {
       );
     }
     if (isPoison(head)) {
+      console.log("ate poison");
       setPoison((currentPoison) =>
         currentPoison.filter(
           (poison) => poison.x !== head.x && poison.y !== head.y
@@ -208,7 +210,7 @@ const UseSnake = () => {
     }
   }, [isFood, isPoison, snake]);
 
-  UseInterval(addFood, 2000);
+  UseInterval(addFood, 3000);
   UseInterval(runSingleStep, 300);
   UseInterval(removeFood, 50);
   UseInterval(addPoison, 4000);
