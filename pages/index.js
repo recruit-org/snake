@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import styles from "../styles/Snake.module.css";
 
 const Config = {
@@ -81,13 +81,13 @@ const useInterval = (callback, duration) => {
   }, [duration]);
 };
 
-const useSnake = () => {
-  const getDefaultSnake = () => [
-    { x: 8, y: 12 },
-    { x: 7, y: 12 },
-    { x: 6, y: 12 },
-  ];
+const getDefaultSnake = () => [
+  { x: 8, y: 12 },
+  { x: 7, y: 12 },
+  { x: 6, y: 12 },
+];
 
+const useSnake = () => {
   // snake[0] is head and snake[snake.length - 1] is tail
   const [snake, setSnake] = useState(getDefaultSnake());
   const [direction, setDirection] = useState(getInitialDirection());
@@ -208,28 +208,39 @@ const useSnake = () => {
     return () => window.removeEventListener("keydown", handleNavigation);
   }, []);
 
-  const cells = [];
-  for (let x = 0; x < Config.width; x++) {
-    for (let y = 0; y < Config.height; y++) {
-      let type = CellType.Empty,
-        remaining = undefined;
-      if (isFood({ x, y })) {
-        type = CellType.Food;
-        remaining =
-          10 -
-          Math.round(
-            (Date.now() -
-              foods.find((food) => food.x === x && food.y === y).createdAt) /
-              1000
-          );
-      } else if (isSnake({ x, y })) {
-        type = CellType.Snake;
+  const cells = useMemo(() => {
+    const elements = [];
+
+    for (let x = 0; x < Config.width; x++) {
+      for (let y = 0; y < Config.height; y++) {
+        let type = CellType.Empty,
+          remaining = undefined;
+        if (isFood({ x, y })) {
+          type = CellType.Food;
+          remaining =
+            10 -
+            Math.round(
+              (Date.now() -
+                foods.find((food) => food.x === x && food.y === y).createdAt) /
+                1000
+            );
+        } else if (isSnake({ x, y })) {
+          type = CellType.Snake;
+        }
+        elements.push(
+          <Cell
+            key={`${x}-${y}`}
+            x={x}
+            y={y}
+            type={type}
+            remaining={remaining}
+          />
+        );
       }
-      cells.push(
-        <Cell key={`${x}-${y}`} x={x} y={y} type={type} remaining={remaining} />
-      );
     }
-  }
+
+    return elements;
+  }, [foods, isFood, isSnake]);
 
   return {
     snake,
