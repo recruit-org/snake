@@ -1,4 +1,5 @@
 import React, { useCallback, useContext, useState } from "react";
+
 import { getDefaultSnake, getInitialDirection } from "../helpers";
 
 export const GameContext = React.createContext({});

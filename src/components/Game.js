@@ -5,18 +5,21 @@ import {
   useGameContext,
 } from "../context/game";
 import Snake from "./Snake";
-import styles from "../../styles/Snake.module.css";
+import Slider, { Range } from "rc-slider";
 import { Config } from "../constants";
 import { usePlay, useReplay } from "../hooks/snake";
 import { useMemo } from "react";
 
+import "rc-slider/assets/index.css";
+import styles from "../../styles/Snake.module.css";
+
 const Header = () => {
-  const { score, state, setState, resetGame } = useGameContext();
+  const { score, state, setState, resetGame, history } = useGameContext();
 
   const actions = useMemo(() => {
     switch (state) {
       case GameState.Finished:
-        return [
+        const actions = [
           {
             name: "New",
             onClick: () => {
@@ -24,13 +27,18 @@ const Header = () => {
               setState(GameState.Playing);
             },
           },
-          {
+        ];
+
+        if (history.length > 0) {
+          actions.push({
             name: "Replay",
             onClick: () => {
               setState(GameState.Replaying);
             },
-          },
-        ];
+          });
+        }
+
+        return actions;
 
       case GameState.Playing:
         return [
@@ -47,10 +55,21 @@ const Header = () => {
             onClick: () => setState(GameState.Playing),
           },
         ];
+
+      case GameState.Replaying:
+        return [
+          {
+            name: "New",
+            onClick: () => {
+              resetGame();
+              setState(GameState.Playing);
+            },
+          },
+        ];
       default:
         return [];
     }
-  }, [state, resetGame, setState]);
+  }, [state, history.length, resetGame, setState]);
 
   return (
     <div
@@ -75,8 +94,47 @@ const Play = () => {
 };
 
 const Replay = () => {
-  useReplay();
-  return <Snake />;
+  const { time, setTime, speed, setSpeed, maxTime } = useReplay();
+
+  const speedMarks = [0, 0.25, 0.5, 1, 2, 4, 8];
+
+  return (
+    <>
+      <div
+        className={styles.header}
+        style={{
+          width: Config.width * Config.cellSize,
+        }}
+      >
+        <Slider
+          min={0}
+          max={maxTime}
+          value={time}
+          onChange={(value) => setTime(value)}
+          step={1}
+        />
+      </div>
+      <div
+        className={styles.header}
+        style={{
+          width: Config.width * Config.cellSize,
+          paddingBottom: 32,
+        }}
+      >
+        <Slider
+          min={0}
+          max={speedMarks.length - 1}
+          value={speedMarks.findIndex((mark) => mark === speed)}
+          onChange={(index) => setSpeed(speedMarks[index])}
+          marks={Object.fromEntries(
+            speedMarks.map((speed, index) => [index, speed + "x"])
+          )}
+          step={null}
+        />
+      </div>
+      <Snake />
+    </>
+  );
 };
 
 const SnakeContainer = () => {

@@ -94,14 +94,19 @@ const useSnakeController = () => {
 };
 
 export const useReplay = () => {
-  const { gotoSnapshot } = useGameContext();
+  const { gotoSnapshot, history } = useGameContext();
   const [time, setTime] = useState(0);
+  const [speed, setSpeed] = useState(1);
+
+  const maxTime = useMemo(() => history[history.length - 1].clock, [history]);
 
   useEffect(() => {
     gotoSnapshot(time);
   }, [time, gotoSnapshot]);
 
-  useInterval(() => setTime((time) => time + 20), 20);
+  useInterval(() => setTime((time) => (time + 20 * speed) % maxTime), 20);
+
+  return { time, setTime, speed, setSpeed, maxTime };
 };
 
 export const usePlay = () => {
