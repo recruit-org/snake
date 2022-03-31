@@ -1,30 +1,20 @@
-import { useEffect, useCallback, useMemo, useContext } from "react";
+import { useEffect, useCallback, useMemo } from "react";
 
 import { Config, CellType, Direction } from "../constants";
-import {
-  getRandomCell,
-  getDefaultSnake,
-  getInitialDirection,
-} from "../helpers";
+import { getRandomCell } from "../helpers";
 
 import Cell from "../components/Cell";
 
 import { useInterval } from "./interval";
 
-import { GameContext } from "../context/game";
+import { GameState, useGameContext } from "../context/game";
 
 const useSnakeController = () => {
-  const { snake, direction, foods, setFoods, setDirection, setSnake } =
-    useContext(GameContext);
+  const { snake, direction, foods, setFoods, setSnake, setState } =
+    useGameContext();
 
   // useCallback() prevents instantiation of a function on each rerender
   // based on the dependency array
-
-  // resets the snake, foods, direction to initial values
-  const resetGame = useCallback(() => {
-    setFoods([]);
-    setDirection(getInitialDirection());
-  }, [setDirection, setFoods]);
 
   const removeFoods = useCallback(() => {
     // only keep those foods which were created within last 10s.
@@ -72,8 +62,8 @@ const useSnakeController = () => {
 
       // reset the game if the snake hit itself
       if (isSnake(newHead)) {
-        resetGame();
-        return getDefaultSnake();
+        setState(GameState.Finished);
+        return snake;
       }
 
       // remove tail from the increased size snake
@@ -90,15 +80,7 @@ const useSnakeController = () => {
 
       return newSnake;
     });
-  }, [
-    direction.x,
-    direction.y,
-    isFood,
-    isSnake,
-    resetGame,
-    setFoods,
-    setSnake,
-  ]);
+  }, [direction.x, direction.y, isFood, isSnake, setFoods, setSnake, setState]);
 
   return {
     foods,
@@ -111,7 +93,7 @@ const useSnakeController = () => {
 };
 
 export const usePlay = () => {
-  const { setDirection } = useContext(GameContext);
+  const { setDirection } = useGameContext();
   const { runSingleStep, addFood, removeFoods } = useSnakeController();
 
   useInterval(runSingleStep, 200);
