@@ -72,20 +72,13 @@ const getRandomCell = () => ({
 const getInitialDirection = () => Direction.Right;
 
 const useInterval = (callback, duration) => {
-  const time = useRef(0);
-
-  const wrappedCallback = useCallback(() => {
-    // don't call callback() more than once within `duration`
-    if (Date.now() - time.current >= duration) {
-      time.current = Date.now();
-      callback();
-    }
-  }, [callback, duration]);
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
 
   useEffect(() => {
-    const interval = setInterval(wrappedCallback, 1000 / 60);
+    const interval = setInterval(() => callbackRef.current(), duration);
     return () => clearInterval(interval);
-  }, [wrappedCallback, duration]);
+  }, [duration]);
 };
 
 const useSnake = () => {
