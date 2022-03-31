@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo } from "react";
+import { useEffect, useCallback, useMemo, useState } from "react";
 
 import { Config, CellType, Direction } from "../constants";
 import { getRandomCell } from "../helpers";
@@ -93,14 +93,26 @@ const useSnakeController = () => {
   };
 };
 
+export const useReplay = () => {
+  const { gotoSnapshot } = useGameContext();
+  const [time, setTime] = useState(0);
+
+  useEffect(() => {
+    gotoSnapshot(time);
+  }, [time, gotoSnapshot]);
+
+  useInterval(() => setTime((time) => time + 20), 20);
+};
+
 export const usePlay = () => {
-  const { setDirection, setClock } = useGameContext();
+  const { setDirection, setClock, saveSnapshot } = useGameContext();
   const { runSingleStep, addFood, removeFoods } = useSnakeController();
 
   useInterval(runSingleStep, 200);
   useInterval(addFood, 3000);
   useInterval(removeFoods, 100);
   useInterval(() => setClock((clock) => clock + 10), 10);
+  useInterval(() => saveSnapshot(), 50);
 
   useEffect(() => {
     const handleDirection = (direction, oppositeDirection) => {

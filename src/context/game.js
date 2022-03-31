@@ -18,6 +18,38 @@ export const useGame = () => {
   const [direction, setDirection] = useState(getInitialDirection());
   const [foods, setFoods] = useState([]);
 
+  const [history, setHistory] = useState([]);
+
+  const saveSnapshot = useCallback(() => {
+    setHistory((history) =>
+      history.concat({
+        clock,
+        snake,
+        foods,
+        direction,
+      })
+    );
+  }, [clock, snake, foods, direction]);
+
+  const gotoSnapshot = useCallback(
+    (time) => {
+      // find first snapshot AFTER time
+      const snapshot = history.find((snap) => snap.clock >= time);
+
+      if (!snapshot) {
+        return;
+      }
+
+      const { clock, snake, foods, direction } = snapshot;
+
+      setClock(clock);
+      setSnake(snake);
+      setFoods(foods);
+      setDirection(direction);
+    },
+    [history]
+  );
+
   const score = snake.length - 3;
 
   // resets the snake, foods, direction to initial values
@@ -26,11 +58,14 @@ export const useGame = () => {
     setSnake(getDefaultSnake());
     setFoods([]);
     setDirection(getInitialDirection());
+    setHistory([]);
   }, [setDirection, setFoods, setState]);
 
   return {
     clock,
     setClock,
+    history,
+    setHistory,
     state,
     setState,
     snake,
@@ -41,6 +76,8 @@ export const useGame = () => {
     setFoods,
     score,
     resetGame,
+    saveSnapshot,
+    gotoSnapshot,
   };
 };
 

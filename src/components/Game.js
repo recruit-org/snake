@@ -7,7 +7,7 @@ import {
 import Snake from "./Snake";
 import styles from "../../styles/Snake.module.css";
 import { Config } from "../constants";
-import { usePlay } from "../hooks/snake";
+import { usePlay, useReplay } from "../hooks/snake";
 import { useMemo } from "react";
 
 const Header = () => {
@@ -18,13 +18,20 @@ const Header = () => {
       case GameState.Finished:
         return [
           {
-            name: "Play",
+            name: "New",
             onClick: () => {
               resetGame();
               setState(GameState.Playing);
             },
           },
+          {
+            name: "Replay",
+            onClick: () => {
+              setState(GameState.Replaying);
+            },
+          },
         ];
+
       case GameState.Playing:
         return [
           {
@@ -32,6 +39,7 @@ const Header = () => {
             onClick: () => setState(GameState.Paused),
           },
         ];
+
       case GameState.Paused:
         return [
           {
@@ -61,8 +69,13 @@ const Header = () => {
   );
 };
 
-const Playing = () => {
+const Play = () => {
   usePlay();
+  return <Snake />;
+};
+
+const Replay = () => {
+  useReplay();
   return <Snake />;
 };
 
@@ -70,7 +83,10 @@ const SnakeContainer = () => {
   const { state } = useGameContext();
   switch (state) {
     case GameState.Playing:
-      return <Playing />;
+      return <Play />;
+
+    case GameState.Replaying:
+      return <Replay />;
 
     default:
       return <Snake />;
