@@ -12,6 +12,7 @@ export const GameState = {
 
 export const useGame = () => {
   // snake[0] is head and snake[snake.length - 1] is tail
+  const [clock, setClock] = useState(0);
   const [state, setState] = useState(GameState.Finished);
   const [snake, setSnake] = useState(getDefaultSnake());
   const [direction, setDirection] = useState(getInitialDirection());
@@ -28,6 +29,8 @@ export const useGame = () => {
   }, [setDirection, setFoods, setState]);
 
   return {
+    clock,
+    setClock,
     state,
     setState,
     snake,

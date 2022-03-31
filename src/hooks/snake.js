@@ -10,7 +10,7 @@ import { useInterval } from "./interval";
 import { GameState, useGameContext } from "../context/game";
 
 const useSnakeController = () => {
-  const { snake, direction, foods, setFoods, setSnake, setState } =
+  const { clock, snake, direction, foods, setFoods, setSnake, setState } =
     useGameContext();
 
   // useCallback() prevents instantiation of a function on each rerender
@@ -19,9 +19,9 @@ const useSnakeController = () => {
   const removeFoods = useCallback(() => {
     // only keep those foods which were created within last 10s.
     setFoods((currentFoods) =>
-      currentFoods.filter((food) => Date.now() - food.createdAt <= 10 * 1000)
+      currentFoods.filter((food) => clock - food.createdAt <= 10 * 1000)
     );
-  }, [setFoods]);
+  }, [setFoods, clock]);
 
   // ?. is called optional chaining
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
@@ -41,8 +41,9 @@ const useSnakeController = () => {
     while (isSnake(newFood) || isFood(newFood)) {
       newFood = getRandomCell();
     }
+    newFood.createdAt = clock;
     setFoods((currentFoods) => [...currentFoods, newFood]);
-  }, [isFood, isSnake, setFoods]);
+  }, [isFood, isSnake, setFoods, clock]);
 
   // move the snake
   const runSingleStep = useCallback(() => {
@@ -93,12 +94,13 @@ const useSnakeController = () => {
 };
 
 export const usePlay = () => {
-  const { setDirection } = useGameContext();
+  const { setDirection, setClock } = useGameContext();
   const { runSingleStep, addFood, removeFoods } = useSnakeController();
 
   useInterval(runSingleStep, 200);
   useInterval(addFood, 3000);
   useInterval(removeFoods, 100);
+  useInterval(() => setClock((clock) => clock + 10), 10);
 
   useEffect(() => {
     const handleDirection = (direction, oppositeDirection) => {
@@ -135,6 +137,7 @@ export const usePlay = () => {
 };
 
 export const useCells = () => {
+  const { clock } = useGameContext();
   const { foods, isFood, isSnake } = useSnakeController();
 
   const cells = useMemo(() => {
@@ -149,7 +152,7 @@ export const useCells = () => {
           remaining =
             10 -
             Math.round(
-              (Date.now() -
+              (clock -
                 foods.find((food) => food.x === x && food.y === y).createdAt) /
                 1000
             );
@@ -169,7 +172,7 @@ export const useCells = () => {
     }
 
     return elements;
-  }, [foods, isFood, isSnake]);
+  }, [foods, isFood, isSnake, clock]);
 
   return cells;
 };
