@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react";
 
-const useInterval = (callback, duration) => {
+export const useInterval = (callback, duration) => {
   const callbackRef = useRef(callback);
   callbackRef.current = callback;
 
@@ -9,5 +9,3 @@ const useInterval = (callback, duration) => {
     return () => clearInterval(interval);
   }, [duration]);
 };
-
-export default useInterval;
