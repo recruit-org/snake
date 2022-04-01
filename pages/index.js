@@ -119,7 +119,8 @@ const useSnake = () => {
   const [foods, setFoods] = useState([]);
   const [poisons, setPoisons] = useState([]);
 
-  const score = snake.length - 3;
+  const defaultSnakeSize = 3
+  const score = snake.length - defaultSnakeSize;
 
   // useCallback() prevents instantiation of a function on each rerender
   // based on the dependency array
@@ -196,10 +197,24 @@ const useSnake = () => {
       // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
       const newSnake = [newHead, ...snake];
 
-      // reset the game if the snake hit itself or hit poison
-      if (isSnake(newHead) || isPoison(newHead)) {
+      // reset the game if the snake hits itself
+      if (isSnake(newHead)) {
         resetGame();
         return getDefaultSnake();
+      }
+      
+      // decrease snake size if it hits poison when the snake is bigger than it's default size
+      if (isPoison(newHead)) {
+        if (newSnake.length - 1 <= defaultSnakeSize ) {
+          resetGame();
+          return getDefaultSnake();
+        } else {
+          newSnake.pop();
+          setPoisons((currentPoisons) => 
+          currentPoisons.filter(
+            (poison) => !(poison.x === newHead.x && poison.y === newHead.y)
+          ));
+        }
       }
 
       // remove tail from the increased size snake
