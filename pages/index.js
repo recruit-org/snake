@@ -131,19 +131,16 @@ const useSnake = () => {
     setPoisons([]);
   }, []);
 
-  const removeFoods = useCallback(() => {
-    // only keep those foods which were created within last 10s.
+  const removeObjects = useCallback( () => {
+    // only keep those foods and poisons which were created within last 10s.
     setFoods((currentFoods) =>
       currentFoods.filter((food) => Date.now() - food.createdAt <= 10 * 1000)
     );
-  }, []);
 
-  const removePoisons = useCallback(() => {
-    // only keep those poisons which were created within last 10s.
     setPoisons((currentPoisons) => 
       currentPoisons.filter((poison) => Date.now() - poison.createdAt <= 10 * 1000)
     );
-  }, [])
+  }, []);
 
   // ?. is called optional chaining
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
@@ -163,22 +160,25 @@ const useSnake = () => {
     [poisons]
   )
 
+  const isOccupied = useCallback((cell) => isSnake(cell) || isFood(cell) || isPoison(cell),
+    [isFood, isPoison, isSnake]);
+
   const addFood = useCallback(() => {
     let newFood = getRandomCell();
-    while (isSnake(newFood) || isFood(newFood) || isPoison(newFood)) {
+    while (isOccupied(newFood)) {
       newFood = getRandomCell();
     }
     setFoods((currentFoods) => [...currentFoods, newFood]);
-  }, [isFood, isSnake, isPoison]);
+  }, [isOccupied]);
 
   const addPoison = useCallback(() => {
     // adds new poison after 5 second
     let newPoison = getRandomCell();
-    while(isSnake(newPoison) || isFood(newPoison) || isPoison(newPoison)) {
+    while(isOccupied(newPoison)) {
       newPoison = getRandomCell();
     }
     setPoisons((currentPoisons) => [...currentPoisons, newPoison]);
-  }, [isFood, isPoison, isSnake])
+  }, [isOccupied])
 
   // move the snake
   const runSingleStep = useCallback(() => {
@@ -220,9 +220,9 @@ const useSnake = () => {
 
   useInterval(runSingleStep, 200);
   useInterval(addFood, 3000);
-  useInterval(removeFoods, 100);
   useInterval(addPoison, 5000);
-  useInterval(removePoisons, 100);
+  useInterval(removeObjects, 100);
+
 
   useEffect(() => {
     const handleDirection = (direction, oppositeDirection) => {
