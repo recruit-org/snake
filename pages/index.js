@@ -12,6 +12,7 @@ const CellType = {
   Snake: "snake",
   Food: "food",
   Empty: "empty",
+  Poison: "poison",
 };
 
 const Direction = {
@@ -34,6 +35,14 @@ const Cell = ({ x, y, type, remaining }) => {
       case CellType.Food:
         return {
           backgroundColor: "tomato",
+          borderRadius: 20,
+          width: 32,
+          height: 32,
+          transform: `scale(${0.5 + remaining / 20})`,
+        };
+      case CellType.Poison:
+        return {
+          backgroundColor: "black",
           borderRadius: 20,
           width: 32,
           height: 32,
@@ -100,6 +109,7 @@ const useSnake = () => {
   const [direction, setDirection] = useState(getInitialDirection());
 
   const [foods, setFoods] = useState([]);
+  const [poison, setPoison] = useState({});
 
   const score = snake.length - 3;
 
@@ -110,6 +120,7 @@ const useSnake = () => {
   const resetGame = useCallback(() => {
     setFoods([]);
     setDirection(getInitialDirection());
+    setPoison({});
   }, []);
 
   const removeFoods = useCallback(() => {
@@ -132,13 +143,23 @@ const useSnake = () => {
     [snake]
   );
 
+  const isPoison = useCallback( ({x,y}) => {  return poison.x === x && poison.y === y}, [poison])
+
   const addFood = useCallback(() => {
     let newFood = getRandomCell();
-    while (isSnake(newFood) || isFood(newFood)) {
+    while (isSnake(newFood) || isFood(newFood) || isPoison(newFood)) {
       newFood = getRandomCell();
     }
     setFoods((currentFoods) => [...currentFoods, newFood]);
   }, [isFood, isSnake]);
+  
+  const addPoison = useCallback(() => {
+    let newPoison = getRandomCell();
+    while (isSnake(newPoison) || isFood(newPoison) || isPoison(newPoison)) {
+      newPoison = getRandomCell();
+    }
+    setPoison(newPoison);
+  },[isFood, isSnake])
 
   // move the snake
   const runSingleStep = useCallback(() => {
@@ -162,6 +183,11 @@ const useSnake = () => {
         return getDefaultSnake();
       }
 
+      if (isPoison(newHead)) {
+        resetGame();
+        return getDefaultSnake();
+      }
+
       // remove tail from the increased size snake
       // only if the newHead isn't a food
       if (!isFood(newHead)) {
@@ -181,6 +207,7 @@ const useSnake = () => {
   useInterval(runSingleStep, 200);
   useInterval(addFood, 3000);
   useInterval(removeFoods, 100);
+  useInterval(addPoison, 5000);
 
   useEffect(() => {
     const handleDirection = (direction, oppositeDirection) => {
@@ -231,6 +258,16 @@ const useSnake = () => {
           );
       } else if (isSnake({ x, y })) {
         type = CellType.Snake;
+      }
+      else if (isPoison({x,y})) {
+        type = CellType.Poison;
+        remaining =
+          5 -
+          Math.round(
+            (Date.now() -
+              poison.createdAt) /
+              1000
+          );
       }
       cells.push(
         <Cell key={`${x}-${y}`} x={x} y={y} type={type} remaining={remaining} />
