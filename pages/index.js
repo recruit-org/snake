@@ -210,7 +210,7 @@ const useSnake = () => {
 
       return newSnake;
     });
-  }, [direction, isFood, isSnake, resetGame]);
+  }, [direction, isFood, isSnake, resetGame, isPoison]);
 
   useInterval(runSingleStep, 200);
   useInterval(addFood, 3000);
