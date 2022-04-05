@@ -113,7 +113,7 @@ export const usePlay = () => {
   const { setDirection, setClock, saveSnapshot } = useGameContext();
   const { runSingleStep, addFood, removeFoods } = useSnakeController();
 
-  useInterval(runSingleStep, 200);
+  useInterval(runSingleStep, 100);
   useInterval(addFood, 3000);
   useInterval(removeFoods, 100);
   useInterval(() => setClock((clock) => clock + 10), 10);

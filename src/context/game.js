@@ -59,6 +59,7 @@ export const useGame = () => {
     setSnake(getDefaultSnake());
     setFoods([]);
     setDirection(getInitialDirection());
+    setClock(0);
     setHistory([]);
   }, [setDirection, setFoods, setState]);
 
