@@ -11,6 +11,7 @@ const Config = {
 const CellType = {
   Snake: "snake",
   Food: "food",
+  Poison: "poison",
   Empty: "empty",
 };
 
@@ -39,6 +40,13 @@ const Cell = ({ x, y, type, remaining }) => {
           height: 32,
           transform: `scale(${0.5 + remaining / 20})`,
         };
+      case CellType.Poison:
+        return {
+          backgroundColor: "red",
+          borderRadius: 20,
+          width: 32,
+          height: 32,
+        };
       default:
         return {};
     }
@@ -63,11 +71,6 @@ const Cell = ({ x, y, type, remaining }) => {
 const getRandomCell = () => ({
   x: Math.floor(Math.random() * Config.width),
   y: Math.floor(Math.random() * Config.width),
-  createdAt: Date.now(),
-});
-const getRandomWrongCell = () => ({
-  x: Math.floor(Math.random() * Config.width) + 24,
-  y: Math.floor(Math.random() * Config.width) + 24,
   createdAt: Date.now(),
 });
 
@@ -96,17 +99,19 @@ const UseSnake = () => {
     { x: 6, y: 12 },
   ];
 
-  // snake[0] is head and snake[snake.length - 1] is tail
   const [snake, setSnake] = useState(getDefaultSnake());
   const [direction, setDirection] = useState(getInitialDirection());
 
   const [foods, setFoods] = useState([]);
+  const [poison, setPoison] = useState([]);
+
   const score = snake.length - 3;
-  // eslint-disable-next-line no-unused-vars
+
   const resetGame = useCallback(() => {
     setSnake(getDefaultSnake());
     setDirection(getInitialDirection());
     setFoods([]);
+    setPoison([]);
   }, []);
 
   const removeFood = useCallback(() => {
@@ -126,6 +131,12 @@ const UseSnake = () => {
     [snake]
   );
 
+  //checking if it's a poison cell
+  const isPoison = useCallback(
+    ({ x, y }) => poison.some((p) => p.x === x && p.y === y),
+    [poison]
+  );
+
   const addFood = useCallback(() => {
     let newFood = getRandomCell();
     while (isSnake(newFood) || isFood(newFood)) {
@@ -133,6 +144,23 @@ const UseSnake = () => {
     }
     setFoods((currentFoods) => [...currentFoods, newFood]);
   }, [isFood, isSnake]);
+
+  //adding poison
+  const addPoison = useCallback(() => {
+    let newPoison = getRandomCell();
+    while (isSnake(newPoison) || isFood(newPoison)) {
+      newPoison = getRandomCell();
+    }
+    setPoison((currentPoison) => [...currentPoison, newPoison]);
+  }, [isFood, isSnake]);
+  //removing poison
+  const removePoison = useCallback(() => {
+    setPoison((currentPoisons) =>
+      currentPoisons.filter(
+        (poison) => Date.now() - poison.createdAt <= 15 * 1000
+      )
+    );
+  }, []);
 
   //moving the snake
   const runSingleStep = useCallback(() => {
@@ -145,7 +173,7 @@ const UseSnake = () => {
       const newSnake = [newHead, ...snake];
 
       //reset the game if snake touches its own body
-      if (isSnake(newHead)) {
+      if (isSnake(newHead) || isPoison(newHead)) {
         resetGame();
         return getDefaultSnake();
       }
@@ -165,6 +193,8 @@ const UseSnake = () => {
   useInterval(runSingleStep, 200);
   useInterval(addFood, 3000);
   useInterval(removeFood, 100);
+  useInterval(addPoison, 15000);
+  useInterval(removePoison, 100);
 
   useEffect(() => {
     const controlDirection = (direction, oppositeDirection) => {
@@ -214,6 +244,8 @@ const UseSnake = () => {
           );
       } else if (isSnake({ x, y })) {
         type = CellType.Snake;
+      } else if (isPoison({ x, y })) {
+        type = CellType.Poison;
       }
       cells.push(
         <Cell key={`${x}-${y}`} x={x} y={y} type={type} remaining={remaining} />
