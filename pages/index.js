@@ -55,9 +55,7 @@ const Cell = ({ x, y, type, remaining }) => {
         height: Config.cellSize,
       }}
     >
-      <div className={styles.cell} style={getStyles()}>
-        {remaining}
-      </div>
+      <div className={styles.cell} style={getStyles()}></div>
     </div>
   );
 };
@@ -232,7 +230,9 @@ const Snake = () => {
     <div className={styles.container}>
       <div
         className={styles.header}
-        style={{ width: Config.width * Config.cellSize }}
+        style={{
+          width: Config.width * Config.cellSize,
+        }}
       >
         Score: {score}
       </div>
