@@ -12,6 +12,7 @@ const CellType = {
   Snake: "snake",
   Food: "food",
   Empty: "empty",
+  Poison: "poison",
 };
 
 const Direction = {
@@ -38,6 +39,23 @@ const Cell = ({ x, y, type, remaining }) => {
           width: 32,
           height: 32,
           transform: `scale(${0.5 + remaining / 20})`,
+        };
+
+      case CellType.Poison:
+        return {
+          // backgroundColor: "purple",
+          // borderRadius: 4,
+          // width: 0,
+          // height: 0,
+          transform: `scale(${0.5 + remaining / 20})`,
+          "border-right": "22px solid transparent",
+          "border-top": "22px solid purple",
+          "border-left": "22px solid purple",
+          "border-bottom": "22px solid purple",
+          "border-top-left-radius": "22px",
+          "border-top-right-radius": "22px",
+          "border-bottom-left-radius": "22px",
+          "border-bottom-right-radius": "22px",
         };
 
       default:
@@ -101,6 +119,8 @@ const useSnake = () => {
 
   const [foods, setFoods] = useState([]);
 
+  const [poison, setPoison] = useState(getRandomCell());
+
   const score = snake.length - 3;
 
   // useCallback() prevents instantiation of a function on each rerender
@@ -110,6 +130,7 @@ const useSnake = () => {
   const resetGame = useCallback(() => {
     setFoods([]);
     setDirection(getInitialDirection());
+    setPoison({});
   }, []);
 
   const removeFoods = useCallback(() => {
@@ -132,12 +153,25 @@ const useSnake = () => {
     [snake]
   );
 
+  const isPoison = useCallback(
+    ({ x, y }) => poison.x === x && poison.y === y,
+    [poison]
+  );
+
   const addFood = useCallback(() => {
     let newFood = getRandomCell();
     while (isSnake(newFood) || isFood(newFood)) {
       newFood = getRandomCell();
     }
     setFoods((currentFoods) => [...currentFoods, newFood]);
+  }, [isFood, isSnake]);
+
+  const addPoison = useCallback(() => {
+    let newPoison = getRandomCell();
+    while (isSnake(newPoison) || isFood(newPoison)) {
+      newPoison = getRandomCell();
+    }
+    setPoison(newPoison);
   }, [isFood, isSnake]);
 
   // move the snake
@@ -157,7 +191,7 @@ const useSnake = () => {
       const newSnake = [newHead, ...snake];
 
       // reset the game if the snake hit itself
-      if (isSnake(newHead)) {
+      if (isSnake(newHead) || isPoison(newHead)) {
         resetGame();
         return getDefaultSnake();
       }
@@ -176,11 +210,12 @@ const useSnake = () => {
 
       return newSnake;
     });
-  }, [direction, isFood, isSnake, resetGame]);
+  }, [direction, isFood, isSnake, resetGame, isPoison]);
 
   useInterval(runSingleStep, 200);
   useInterval(addFood, 3000);
   useInterval(removeFoods, 100);
+  useInterval(addPoison, 5000);
 
   useEffect(() => {
     const handleDirection = (direction, oppositeDirection) => {
@@ -231,6 +266,9 @@ const useSnake = () => {
           );
       } else if (isSnake({ x, y })) {
         type = CellType.Snake;
+      } else if (isPoison({ x, y })) {
+        type = CellType.Poison;
+        remaining = 5 - Math.round((Date.now() - poison.createdAt) / 1000);
       }
       cells.push(
         <Cell key={`${x}-${y}`} x={x} y={y} type={type} remaining={remaining} />
