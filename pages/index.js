@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import styles from "../styles/Snake.module.css";
 
 const Config = {
@@ -21,7 +21,7 @@ const Direction = {
   Bottom: { x: 0, y: 1 },
 };
 
-const Cell = ({ x, y, type }) => {
+const Cell = ({ x, y, type, remaining }) => {
   const getStyles = () => {
     switch (type) {
       case CellType.Snake:
@@ -37,14 +37,16 @@ const Cell = ({ x, y, type }) => {
           borderRadius: 20,
           width: 32,
           height: 32,
+          transform: `scale(${0.5 + remaining / 20})`,
         };
-
       default:
         return {};
     }
   };
   return (
+    // eslint-disable-next-line react/react-in-jsx-scope
     <div
+      key={`${x}-${y}`}
       className={styles.cellContainer}
       style={{
         left: x * Config.cellSize,
@@ -61,81 +63,133 @@ const Cell = ({ x, y, type }) => {
 const getRandomCell = () => ({
   x: Math.floor(Math.random() * Config.width),
   y: Math.floor(Math.random() * Config.width),
+  createdAt: Date.now(),
+});
+const getRandomWrongCell = () => ({
+  x: Math.floor(Math.random() * Config.width) + 24,
+  y: Math.floor(Math.random() * Config.width) + 24,
+  createdAt: Date.now(),
 });
 
-const Snake = () => {
+const getInitialDirection = () => Direction.Right;
+
+const useInterval = (callback, duration) => {
+  const time = useRef(0);
+
+  const wrappedCallback = useCallback(() => {
+    if (Date.now() - time.current >= duration) {
+      time.current = Date.now();
+      callback();
+    }
+  }, [callback, duration]);
+
+  useEffect(() => {
+    const interval = setInterval(wrappedCallback, 1000 / 60);
+    return () => clearInterval(interval);
+  }, [wrappedCallback, duration]);
+};
+
+const UseSnake = () => {
   const getDefaultSnake = () => [
     { x: 8, y: 12 },
     { x: 7, y: 12 },
     { x: 6, y: 12 },
   ];
-  const grid = useRef();
 
   // snake[0] is head and snake[snake.length - 1] is tail
   const [snake, setSnake] = useState(getDefaultSnake());
-  const [direction, setDirection] = useState(Direction.Right);
+  const [direction, setDirection] = useState(getInitialDirection());
 
-  const [food, setFood] = useState({ x: 4, y: 10 });
-  const [score, setScore] = useState(0);
+  const [foods, setFoods] = useState([]);
+  const score = snake.length - 3;
+  // eslint-disable-next-line no-unused-vars
+  const resetGame = useCallback(() => {
+    setSnake(getDefaultSnake());
+    setDirection(getInitialDirection());
+    setFoods([]);
+  }, []);
 
-  // move the snake
-  useEffect(() => {
-    const runSingleStep = () => {
-      setSnake((snake) => {
-        const head = snake[0];
-        const newHead = { x: head.x + direction.x, y: head.y + direction.y };
+  const removeFood = useCallback(() => {
+    setFoods((currentFoods) =>
+      currentFoods.filter((food) => Date.now() - food.createdAt <= 10 * 1000)
+    );
+  }, []);
 
-        // make a new snake by extending head
-        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
-        const newSnake = [newHead, ...snake];
+  const isFood = useCallback(
+    ({ x, y }) => foods.some((food) => food.x === x && food.y === y),
+    [foods]
+  );
 
-        // remove tail
+  const isSnake = useCallback(
+    ({ x, y }) =>
+      snake.find((position) => position.x === x && position.y === y),
+    [snake]
+  );
+
+  const addFood = useCallback(() => {
+    let newFood = getRandomCell();
+    while (isSnake(newFood) || isFood(newFood)) {
+      newFood = getRandomCell();
+    }
+    setFoods((currentFoods) => [...currentFoods, newFood]);
+  }, [isFood, isSnake]);
+
+  //moving the snake
+  const runSingleStep = useCallback(() => {
+    setSnake((snake) => {
+      const head = snake[0];
+      const newHead = {
+        x: (head.x + direction.x + Config.height) % Config.height,
+        y: (head.y + direction.y + Config.width) % Config.width,
+      };
+      const newSnake = [newHead, ...snake];
+
+      //reset the game if snake touches its own body
+      if (isSnake(newHead)) {
+        resetGame();
+        return getDefaultSnake();
+      }
+      if (!isFood(newHead)) {
         newSnake.pop();
+      } else {
+        setFoods((currentFoods) =>
+          currentFoods.filter(
+            (food) => !(food.x === newHead.x && food.y === newHead.y)
+          )
+        );
+      }
+      return newSnake;
+    });
+  }, [direction, isFood, isSnake, resetGame]);
 
-        return newSnake;
+  useInterval(runSingleStep, 200);
+  useInterval(addFood, 3000);
+  useInterval(removeFood, 100);
+
+  useEffect(() => {
+    const controlDirection = (direction, oppositeDirection) => {
+      setDirection((currentDirection) => {
+        if (currentDirection === oppositeDirection) {
+          return currentDirection;
+        } else return direction;
       });
     };
-
-    runSingleStep();
-    const timer = setInterval(runSingleStep, 500);
-
-    return () => clearInterval(timer);
-  }, [direction, food]);
-
-  // update score whenever head touches a food
-  useEffect(() => {
-    const head = snake[0];
-    if (isFood(head)) {
-      setScore((score) => {
-        return score + 1;
-      });
-
-      let newFood = getRandomCell();
-      while (isSnake(newFood)) {
-        newFood = getRandomCell();
-      }
-
-      setFood(newFood);
-    }
-  }, [snake]);
-
-  useEffect(() => {
     const handleNavigation = (event) => {
       switch (event.key) {
         case "ArrowUp":
-          setDirection(Direction.Top);
+          controlDirection(Direction.Top, Direction.Bottom);
           break;
 
         case "ArrowDown":
-          setDirection(Direction.Bottom);
+          controlDirection(Direction.Bottom, Direction.Top);
           break;
 
         case "ArrowLeft":
-          setDirection(Direction.Left);
+          controlDirection(Direction.Left, Direction.Right);
           break;
 
         case "ArrowRight":
-          setDirection(Direction.Right);
+          controlDirection(Direction.Right, Direction.Left);
           break;
       }
     };
@@ -144,31 +198,41 @@ const Snake = () => {
     return () => window.removeEventListener("keydown", handleNavigation);
   }, []);
 
-  // ?. is called optional chaining
-  // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
-  const isFood = ({ x, y }) => food?.x === x && food?.y === y;
-
-  const isSnake = ({ x, y }) =>
-    snake.find((position) => position.x === x && position.y === y);
-
   const cells = [];
   for (let x = 0; x < Config.width; x++) {
     for (let y = 0; y < Config.height; y++) {
-      let type = CellType.Empty;
+      let type = CellType.Empty,
+        remaining = undefined;
       if (isFood({ x, y })) {
         type = CellType.Food;
+        remaining =
+          10 -
+          Math.round(
+            (Date.now() -
+              foods.find((food) => food.x === x && food.y === y).createdAt) /
+              1000
+          );
       } else if (isSnake({ x, y })) {
         type = CellType.Snake;
       }
-      cells.push(<Cell key={`${x}-${y}`} x={x} y={y} type={type} />);
+      cells.push(
+        <Cell key={`${x}-${y}`} x={x} y={y} type={type} remaining={remaining} />
+      );
     }
   }
 
+  return { snake, cells, score };
+};
+
+const Snake = () => {
+  const { cells, score } = UseSnake();
   return (
     <div className={styles.container}>
       <div
         className={styles.header}
-        style={{ width: Config.width * Config.cellSize }}
+        style={{
+          width: Config.width * Config.cellSize,
+        }}
       >
         Score: {score}
       </div>
