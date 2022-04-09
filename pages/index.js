@@ -63,9 +63,7 @@ const Cell = ({ x, y, type, remaining }) => {
         height: Config.cellSize,
       }}
     >
-      <div className={styles.cell} style={getStyles()}>
-        {remaining}
-      </div>
+      <div className={styles.cell} style={getStyles()}></div>
     </div>
   );
 };
@@ -100,6 +98,7 @@ const useSnake = () => {
   // snake[0] is head and snake[snake.length - 1] is tail
   const [snake, setSnake] = useState(getDefaultSnake());
   const [direction, setDirection] = useState(Direction.Right);
+  // const [object, setObject] = useState([{ x: 4, y: 10, food: true }]);
 
   const [foods, setFoods] = useState([{ x: 4, y: 10 }]);
   const [poison, setPoison] = useState([]);
@@ -110,10 +109,21 @@ const useSnake = () => {
     setDirection(Direction.Right);
     setFoods([{ x: 4, y: 10 }]);
   }, []);
+
   //helper function for removing food
-  const removeFood = useCallback(() => {
-    setFoods((fs) => fs.filter((f) => Date.now() - f.createdAt <= 10 * 1000));
+  // const removeFood = useCallback(() => {
+  //   setFoods((fs) => fs.filter((f) => Date.now() - f.createdAt <= 10 * 1000));
+  // }, []);
+  const removeObject = useCallback((type) => {
+    if (type === CellType.Poison) {
+      setPoison((poison) =>
+        poison.filter((p) => Date.now() - p.createdAt <= 15 * 1000)
+      );
+    } else {
+      setFoods((fs) => fs.filter((f) => Date.now() - f.createdAt <= 10 * 1000));
+    }
   }, []);
+
   // ?. is called optional chaining
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
   const isFood = useCallback(
@@ -130,24 +140,43 @@ const useSnake = () => {
       snake.find((position) => position.x === x && position.y === y),
     [snake]
   );
+  const isOccupied = useCallback(
+    (cell) => isSnake(cell) || isFood(cell) || isPoison(cell),
+    [isFood, isPoison, isSnake]
+  );
   //helper function for adding new food
-  const addNewFood = useCallback(() => {
-    let newFood = getRandomCell();
-    while (isSnake(newFood) || isFood(newFood)) {
-      newFood = getRandomCell();
-    }
+  // const addNewFood = useCallback(() => {
+  //   let newFood = getRandomCell();
+  //   while (isOccupied(newFood)) {
+  //     newFood = getRandomCell();
+  //   }
 
-    setFoods((fs) => [...fs, newFood]);
-  }, [isSnake, isFood]);
+  //   setFoods((fs) => [...fs, newFood]);
+  // }, [isOccupied]);
+
   //helper function for adding new food
-  const addNewPoison = useCallback(() => {
-    let newPoison = getRandomCell();
-    while (isSnake(newPoison) || isFood(newPoison) || isPoison(newPoison)) {
-      newPoison = getRandomCell();
-    }
+  // const addNewPoison = useCallback(() => {
+  //   let newPoison = getRandomCell();
+  //   while (isOccupied(newPoison)) {
+  //     newPoison = getRandomCell();
+  //   }
 
-    setPoison((fs) => [...fs, newPoison]);
-  }, [isSnake, isFood, isPoison]);
+  //   setPoison((fs) => [...fs, newPoison]);
+  // }, [isOccupied]);
+  const addNewObject = useCallback(
+    (type) => {
+      let newObject = getRandomCell();
+      while (isOccupied(newObject)) {
+        newObject = getRandomCell();
+      }
+      if (type === CellType.Food) {
+        setFoods((fs) => [...fs, newObject]);
+      } else {
+        setPoison((fs) => [...fs, newObject]);
+      }
+    },
+    [isOccupied]
+  );
 
   // move the snake
   const runSingleStep = useCallback(() => {
@@ -167,7 +196,7 @@ const useSnake = () => {
         newSnake.pop();
       } else if (isFood(newHead)) {
         setFoods((cf) =>
-          cf.filter((f) => f.x !== newHead.x && f.y !== newHead.y)
+          cf.filter((f) => !(f.x === newHead.x && f.y === newHead.y))
         );
       }
       // check if snake is eating itself
@@ -176,7 +205,7 @@ const useSnake = () => {
       }
       if (isPoison(newHead)) {
         setPoison((cf) =>
-          cf.filter((f) => f.x !== newHead.x && f.y !== newHead.y)
+          cf.filter((f) => !(f.x === newHead.x && f.y === newHead.y))
         );
         if (snake.length > 3) {
           setSnake((snake) => snake.slice(0, snake.length - 1));
@@ -188,9 +217,10 @@ const useSnake = () => {
   }, [direction, resetGame, isSnake, isFood, isPoison]);
 
   useInterval(runSingleStep, 200);
-  useInterval(addNewFood, 3000);
-  useInterval(addNewPoison, 5000);
-  useInterval(removeFood, 100);
+  useInterval(() => addNewObject(CellType.Food), 3000);
+  useInterval(() => addNewObject(CellType.Poison), 5000);
+  useInterval(() => removeObject(CellType.Food), 100);
+  useInterval(() => removeObject(CellType.Poison), 100);
 
   useEffect(() => {
     const handleKey = (direction, oppositeDirection) => {
