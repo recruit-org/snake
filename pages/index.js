@@ -63,7 +63,9 @@ const Cell = ({ x, y, type, remaining }) => {
         height: Config.cellSize,
       }}
     >
-      <div className={styles.cell} style={getStyles()}></div>
+      <div className={styles.cell} style={getStyles()}>
+        {remaining}
+      </div>
     </div>
   );
 };
@@ -98,8 +100,6 @@ const useSnake = () => {
   // snake[0] is head and snake[snake.length - 1] is tail
   const [snake, setSnake] = useState(getDefaultSnake());
   const [direction, setDirection] = useState(Direction.Right);
-  // const [object, setObject] = useState([{ x: 4, y: 10, food: true }]);
-
   const [foods, setFoods] = useState([{ x: 4, y: 10 }]);
   const [poison, setPoison] = useState([]);
   const score = snake.length - 3;
