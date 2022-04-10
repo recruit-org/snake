@@ -49,6 +49,18 @@ const UseSnake = () => {
     [poison]
   );
 
+  const addObject = useCallback((type) => {
+    let newObject = getRandomCell();
+    while (isSnake(newObject) || isFood(newObject)) {
+      newObject = getRandomCell();
+    }
+    if ((type = "food")) {
+      setFoods((currentFoods) => [...currentFoods, newObject]);
+    } else {
+      setPoison((currentPoison) => [...currentPoison, newObject]);
+    }
+  });
+
   const addFood = useCallback(() => {
     let newFood = getRandomCell();
     while (isSnake(newFood) || isFood(newFood)) {
@@ -139,7 +151,6 @@ const UseSnake = () => {
 
     return () => window.removeEventListener("keydown", handleNavigation);
   }, []);
-
   const cells = useMemo(() => {
     const elements = [];
     for (let x = 0; x < Config.width; x++) {
@@ -173,31 +184,6 @@ const UseSnake = () => {
     }
     return elements;
   }, [foods, isFood, isSnake]);
-
-  //   const cells = [];
-  //   for (let x = 0; x < Config.width; x++) {
-  //     for (let y = 0; y < Config.height; y++) {
-  //       let type = CellType.Empty,
-  //         remaining = undefined;
-  //       if (isFood({ x, y })) {
-  //         type = CellType.Food;
-  //         remaining =
-  //           10 -
-  //           Math.round(
-  //             (Date.now() -
-  //               foods.find((food) => food.x === x && food.y === y).createdAt) /
-  //               1000
-  //           );
-  //       } else if (isSnake({ x, y })) {
-  //         type = CellType.Snake;
-  //       } else if (isPoison({ x, y })) {
-  //         type = CellType.Poison;
-  //       }
-  //       cells.push(
-  //         <Cell key={`${x}-${y}`} x={x} y={y} type={type} remaining={remaining} />
-  //       );
-  //     }
-  //   }
 
   return { snake, cells, score };
 };
