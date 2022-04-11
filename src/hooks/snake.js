@@ -49,12 +49,13 @@ const UseSnake = () => {
     [poison]
   );
 
+  //suggested method ---------------->
   const addObject = useCallback((type) => {
     let newObject = getRandomCell();
     while (isSnake(newObject) || isFood(newObject)) {
       newObject = getRandomCell();
     }
-    if ((type = "food")) {
+    if (type === "food") {
       setFoods((currentFoods) => [...currentFoods, newObject]);
     } else {
       setPoison((currentPoison) => [...currentPoison, newObject]);
