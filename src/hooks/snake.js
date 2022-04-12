@@ -26,7 +26,7 @@ export const useSnake = () => {
   // const removeFood = useCallback(() => {
   //   setFoods((fs) => fs.filter((f) => Date.now() - f.createdAt <= 10 * 1000));
   // }, []);
-  const removeobjectect = useCallback((type) => {
+  const removeObject = useCallback((type) => {
     setobject((o) => ({
       ...o,
       [type]: o[type].filter((f) => Date.now() - f.createdAt <= 10 * 1000),
@@ -36,7 +36,7 @@ export const useSnake = () => {
   // ?. is called optional chaining
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
   const isFood = useCallback(
-    ({ x, y }) => object["food"].some((food) => food.x === x && food.y === y),
+    ({ x, y }) => object.food.some((food) => food.x === x && food.y === y),
     [object]
   );
   const isPoison = useCallback(
@@ -72,7 +72,7 @@ export const useSnake = () => {
 
   //   setPoison((fs) => [...fs, newPoison]);
   // }, [isOccupied]);
-  const addNewobjectect = useCallback(
+  const addNewObject = useCallback(
     (type) => {
       let newobject = getRandomCell();
       while (isOccupied(newobject)) {
@@ -129,10 +129,10 @@ export const useSnake = () => {
   }, [direction, resetGame, isSnake, isFood, isPoison]);
 
   useInterval(runSingleStep, 200);
-  useInterval(() => addNewobjectect(CellType.Food), 3000);
-  useInterval(() => addNewobjectect(CellType.Poison), 5000);
-  useInterval(() => removeobjectect(CellType.Food), 100);
-  useInterval(() => removeobjectect(CellType.Poison), 100);
+  useInterval(() => addNewObject(CellType.Food), 3000);
+  useInterval(() => addNewObject(CellType.Poison), 5000);
+  useInterval(() => removeObject(CellType.Food), 100);
+  useInterval(() => removeObject(CellType.Poison), 100);
 
   useEffect(() => {
     const handleKey = (direction, oppositeDirection) => {
