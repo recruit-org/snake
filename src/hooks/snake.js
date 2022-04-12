@@ -116,9 +116,9 @@ const UseSnake = () => {
   }, [direction, isFood, isSnake, resetGame]);
 
   useInterval(runSingleStep, 200);
-  useInterval(addObject("food"), 3000);
+  useInterval(() => addObject("food"), 3000);
   useInterval(removeFood, 100);
-  useInterval(addObject("poison"), 15000);
+  useInterval(() => addObject("poison"), 15000);
   useInterval(removePoison, 100);
 
   useEffect(() => {
