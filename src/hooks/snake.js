@@ -17,22 +17,21 @@ export const useSnake = () => {
     setObject([]);
   }, []);
 
-  //helper function for removing food
-  // const removeFood = useCallback(() => {
-  //   setFoods((fs) => fs.filter((f) => Date.now() - f.createdAt <= 10 * 1000));
-  // }, []);
+  //helper function for removing object
   const removeObject = useCallback(() => {
     setObject((o) => o.filter((f) => Date.now() - f.createdAt <= 10 * 1000));
   }, []);
 
   const isObject = useCallback(
-    ({ x, y }) => object.some((obj) => obj.x === x && obj.y === y),
+    ({ x, y }) => object.find((obj) => obj.x === x && obj.y === y),
     [object]
   );
-  const isTypeObject = useCallback(
-    ({ x, y, type }) =>
-      object.some((obj) => obj.type === type && obj.x === x && obj.y === y),
-    [object]
+  const isCellContainsObjectOfType = useCallback(
+    ({ x, y, type }) => {
+      const _obj = isObject({ x, y });
+      return _obj && _obj.type === type;
+    },
+    [isObject]
   );
 
   const isSnake = useCallback(
@@ -94,9 +93,11 @@ export const useSnake = () => {
       const newSnake = [newHead, ...snake];
 
       // check if snake is eating food
-      if (!isTypeObject({ ...newHead, type: CellType.Food })) {
+      if (!isCellContainsObjectOfType({ ...newHead, type: CellType.Food })) {
         newSnake.pop();
-      } else if (isTypeObject({ ...newHead, type: CellType.Food })) {
+      } else if (
+        isCellContainsObjectOfType({ ...newHead, type: CellType.Food })
+      ) {
         setObject((o) =>
           o.filter(
             (f) =>
@@ -112,7 +113,7 @@ export const useSnake = () => {
       if (isSnake(newHead)) {
         resetGame();
       }
-      if (isTypeObject({ ...newHead, type: CellType.Poison })) {
+      if (isCellContainsObjectOfType({ ...newHead, type: CellType.Poison })) {
         setObject((o) =>
           o.filter(
             (f) =>
@@ -131,7 +132,7 @@ export const useSnake = () => {
 
       return newSnake;
     });
-  }, [direction, isTypeObject, isSnake, resetGame]);
+  }, [direction, isCellContainsObjectOfType, isSnake, resetGame]);
 
   useInterval(runSingleStep, 200);
   useInterval(() => addNewObject(CellType.Food), 3000);
@@ -176,7 +177,7 @@ export const useSnake = () => {
       for (let y = 0; y < Config.height; y++) {
         let type = CellType.Empty,
           remaining = undefined;
-        if (isTypeObject({ x, y, type: CellType.Food })) {
+        if (isCellContainsObjectOfType({ x, y, type: CellType.Food })) {
           type = CellType.Food;
           remaining =
             10 -
@@ -190,7 +191,9 @@ export const useSnake = () => {
             );
         } else if (isSnake({ x, y })) {
           type = CellType.Snake;
-        } else if (isTypeObject({ x, y, type: CellType.Poison })) {
+        } else if (
+          isCellContainsObjectOfType({ x, y, type: CellType.Poison })
+        ) {
           type = CellType.Poison;
         }
         elements.push(
@@ -205,7 +208,7 @@ export const useSnake = () => {
       }
     }
     return elements;
-  }, [isTypeObject, isSnake, object]);
+  }, [isCellContainsObjectOfType, isSnake, object]);
 
-  return { score, isTypeObject, isSnake, cells };
+  return { score, isCellContainsObjectOfType, isSnake, cells };
 };
