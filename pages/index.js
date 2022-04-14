@@ -104,6 +104,7 @@ const useSnake = () => {
     { x: 6, y: 12 },
   ];
 
+ 
   // snake[0] is head and snake[snake.length - 1] is tail
   const [snake, setSnake] = useState(getDefaultSnake());
   const [direction, setDirection] = useState(getInitialDirection());
@@ -116,12 +117,17 @@ const useSnake = () => {
   // useCallback() prevents instantiation of a function on each rerender
   // based on the dependency array
 
+  
+  
+  
   // resets the snake ,foods, direction to initial values
   const resetGame = useCallback(() => {
-    setFoods([]);
+    
+    setFoods([getEmptyCell()]);
     setDirection(getInitialDirection());
     setPoison({});
-  }, []);
+
+  }, [getEmptyCell]);
 
   const removeFoods = useCallback(() => {
     // only keep those foods which were created within last 10s.
@@ -144,22 +150,33 @@ const useSnake = () => {
   );
 
   const isPoison = useCallback( ({x,y}) => {  return poison.x === x && poison.y === y}, [poison])
+  const isOccupied = useCallback((cell) => isFood(cell) || isSnake(cell) || isPoison(cell), [isFood, isSnake, isPoison]);
+
+  const getEmptyCell = useCallback(() =>{
+    let newCell = getRandomCell();
+    while (isOccupied(newCell)) {
+      newCell = getRandomCell();
+    }
+    return newCell;
+  },[isOccupied]);
 
   const addFood = useCallback(() => {
-    let newFood = getRandomCell();
-    while (isSnake(newFood) || isFood(newFood) || isPoison(newFood)) {
-      newFood = getRandomCell();
-    }
-    setFoods((currentFoods) => [...currentFoods, newFood]);
-  }, [isFood, isSnake]);
+    setFoods((currentFoods) => [...currentFoods, getEmptyCell()]);
+  }, [getEmptyCell]);
   
   const addPoison = useCallback(() => {
-    let newPoison = getRandomCell();
-    while (isSnake(newPoison) || isFood(newPoison) || isPoison(newPoison)) {
-      newPoison = getRandomCell();
+    setPoison(getEmptyCell());
+  },[getEmptyCell])
+
+  const addObject = (typeOfObject = "food")=>{
+    if(typeOfObject === "food"){
+      addFood()
     }
-    setPoison(newPoison);
-  },[isFood, isSnake])
+    else if(typeOfObject === "poison"){
+      addPoison()
+    }
+  }
+
 
   // move the snake
   const runSingleStep = useCallback(() => {
@@ -202,12 +219,12 @@ const useSnake = () => {
 
       return newSnake;
     });
-  }, [direction, isFood, isSnake, resetGame]);
+  }, [direction, isFood, isSnake, isPoison, resetGame]);
 
   useInterval(runSingleStep, 200);
-  useInterval(addFood, 3000);
+  useInterval(()=>addObject("food"), 3000);
+  useInterval(()=>addObject("poison"), 5000);
   useInterval(removeFoods, 100);
-  useInterval(addPoison, 5000);
 
   useEffect(() => {
     const handleDirection = (direction, oppositeDirection) => {
