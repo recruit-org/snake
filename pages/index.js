@@ -21,7 +21,7 @@ const Direction = {
   Bottom: { x: 0, y: 1 },
 };
 
-const Cell = ({ x, y, type }) => {
+const Cell = ({ x, y, type, remaining }) => {
   const getStyles = () => {
     switch (type) {
       case CellType.Snake:
@@ -33,10 +33,11 @@ const Cell = ({ x, y, type }) => {
 
       case CellType.Food:
         return {
-          backgroundColor: "darkorange",
+          backgroundColor: "tomato",
           borderRadius: 20,
           width: 32,
           height: 32,
+          transform: `scale(${0.5 + remaining / 20})`,
         };
 
       case CellType.Poison:
@@ -45,6 +46,7 @@ const Cell = ({ x, y, type }) => {
           borderRadius: 20,
           width: 32,
           height: 32,
+          transform: `scale(${0.5 + remaining / 20})`,
         };
 
       default:
@@ -61,7 +63,9 @@ const Cell = ({ x, y, type }) => {
         height: Config.cellSize,
       }}
     >
-      <div className={styles.cell} style={getStyles()}></div>
+      <div className={styles.cell} style={getStyles()}>
+        {remaining}
+      </div>
     </div>
   );
 };
@@ -207,8 +211,8 @@ const UseSnake = () => {
   UseInterval(() => addObject("food"), 3000);
   UseInterval(() => addObject("poison"), 1000);
   UseInterval(runSingleStep, 300);
-  UseInterval(() => removeObject("food"),50);
-  UseInterval(()=> removeObject("poison"), 100);
+  UseInterval(() => removeObject("food"), 50);
+  UseInterval(() => removeObject("poison"), 100);
 
   const changeDir = (checkDir, newDir) => {
     setDirection((direction) => {
@@ -241,28 +245,36 @@ const UseSnake = () => {
 
     return () => window.removeEventListener("keydown", handleNavigation);
   }, []);
-
-  return { score, isFood, isSnake, isPoison };
-};
-
-//view
-const Snake = () => {
-  const { score, isFood, isSnake, isPoison } = UseSnake();
   const cells = [];
   for (let x = 0; x < Config.width; x++) {
     for (let y = 0; y < Config.height; y++) {
-      let type = CellType.Empty;
+      let type = CellType.Empty,
+        remaining = undefined;
       if (isFood({ x, y })) {
         type = CellType.Food;
+        remaining =
+          10 -
+          Math.round(
+            (Date.now() -
+              foods.find((food) => food.x === x && food.y === y).createdAt) /
+              1000
+          );
       } else if (isSnake({ x, y })) {
         type = CellType.Snake;
       } else if (isPoison({ x, y })) {
         type = CellType.Poison;
       }
-      cells.push(<Cell key={`${x}-${y}`} x={x} y={y} type={type} />);
+      cells.push(
+        <Cell key={`${x}-${y}`} x={x} y={y} type={type} remaining={remaining} />
+      );
     }
   }
+  return { score, isFood, isSnake, isPoison, cells };
+};
 
+//view
+const Snake = () => {
+  const { score, cells } = UseSnake();
   return (
     <div className={styles.container}>
       <div
