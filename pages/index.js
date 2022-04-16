@@ -98,8 +98,6 @@ const UseSnake = () => {
     { x: 7, y: 12 },
     { x: 6, y: 12 },
   ];
-  const grid = useRef();
-
   // snake[0] is head and snake[snake.length - 1] is tail
   const [snake, setSnake] = useState(getDefaultSnake());
   const [direction, setDirection] = useState(Direction.Right);
@@ -107,23 +105,17 @@ const UseSnake = () => {
   const [poisons, setPoison] = useState([]);
   const score = snake.length - 3;
 
-  // ?. is called optional chaining
-  const isFood = useCallback(
-    ({ x, y }) =>
-      foods.find((position) => position.x === x && position.y === y),
-    [foods]
-  );
+  const finding = ({ x, y }, arr) => {
+    return arr.find((position) => position.x === x && position.y === y);
+  };
 
-  const isPoison = useCallback(
-    ({ x, y }) =>
-      poisons.find((position) => position.x === x && position.y === y),
-    [poisons]
-  );
-
-  const isSnake = useCallback(
-    ({ x, y }) =>
-      snake.find((position) => position.x === x && position.y === y),
-    [snake]
+  const isObject = useCallback(
+    ({ x, y }, type) => {
+      if (type === "food") return finding({ x, y }, foods);
+      else if (type === "poison") return finding({ x, y }, poisons);
+      else if (type === "snake") return finding({ x, y }, snake);
+    },
+    [foods, poisons, snake]
   );
 
   //restart the game
@@ -147,24 +139,27 @@ const UseSnake = () => {
       const newSnake = [newHead, ...snake];
 
       // remove tail when head doesnt eat food
-      if (!isFood(newHead)) {
+      if (!isObject(newHead, "food")) {
         newSnake.pop();
       }
       //remove again when eats poison
-      if (isPoison(newHead)) {
+      if (isObject(newHead, "poison")) {
         newSnake.pop();
       }
-      if (isSnake(newHead) || score < 0) {
+      if (isObject(newHead, "snake") || score < 0) {
         resetGame();
       }
 
       return newSnake;
     });
-  }, [direction.x, direction.y, isFood, isPoison, isSnake, resetGame, score]);
+  }, [direction.x, direction.y, isObject, resetGame, score]);
 
   const isBlocked = useCallback(
-    (cell) => isSnake(cell) || isFood(cell) || isPoison(cell),
-    [isFood, isPoison, isSnake]
+    (cell) =>
+      isObject(cell, "snake") ||
+      isObject(cell, "food") ||
+      isObject(cell, "poison"),
+    [isObject]
   );
   const addObject = useCallback(
     (flag) => {
@@ -192,13 +187,13 @@ const UseSnake = () => {
   // update foods and poisons whenever head touches a food or a poison
   useEffect(() => {
     const head = snake[0];
-    if (isFood(head)) {
+    if (isObject(head, "food")) {
       console.log("ate food");
       setFoods((currentFoods) =>
         currentFoods.filter((food) => !(food.x === head.x && food.y === head.y))
       );
     }
-    if (isPoison(head)) {
+    if (isObject(head, "poison")) {
       console.log("ate poison");
       setPoison((currentPoison) =>
         currentPoison.filter(
@@ -206,7 +201,7 @@ const UseSnake = () => {
         )
       );
     }
-  }, [isFood, isPoison, snake]);
+  }, [isObject, snake]);
 
   UseInterval(() => addObject("food"), 3000);
   UseInterval(() => addObject("poison"), 1000);
@@ -250,18 +245,18 @@ const UseSnake = () => {
     for (let y = 0; y < Config.height; y++) {
       let type = CellType.Empty,
         remaining = undefined;
-      if (isFood({ x, y })) {
+      if (isObject({ x, y }, "food")) {
         type = CellType.Food;
         remaining =
           10 -
           Math.round(
             (Date.now() -
-              foods.find((food) => food.x === x && food.y === y).createdAt) /
+              foods.find((food) => food.x === x && food.y === y).start) /
               1000
           );
-      } else if (isSnake({ x, y })) {
+      } else if (isObject({ x, y }, "snake")) {
         type = CellType.Snake;
-      } else if (isPoison({ x, y })) {
+      } else if (isObject({ x, y }, "poison")) {
         type = CellType.Poison;
       }
       cells.push(
@@ -269,7 +264,7 @@ const UseSnake = () => {
       );
     }
   }
-  return { score, isFood, isSnake, isPoison, cells };
+  return { score, isObject, cells };
 };
 
 //view
