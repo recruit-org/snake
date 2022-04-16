@@ -158,37 +158,31 @@ const UseSnake = () => {
     });
   }, [direction.x, direction.y, isFood, isPoison, isSnake, resetGame, score]);
 
-  //add new food
-  const addFood = () => {
-    let newFood = getRandomCell();
-    while (isSnake(newFood) || isFood(newFood) || isPoison(newFood)) {
-      newFood = getRandomCell();
-    }
-    setFoods((currentFoods) => [...currentFoods, newFood]);
-  };
-
-  //add poison
-  const addPoison = () => {
-    let newPoison = getRandomCell();
-    while (isSnake(newPoison) || isFood(newPoison) || isPoison(newPoison)) {
-      newPoison = getRandomCell();
-    }
-    setPoison((currentPoison) => [...currentPoison, newPoison]);
-  };
-
-  //remove food
-  const removeFood = useCallback(() => {
-    // console.log("delete food auto");
-    setFoods((currentFoods) =>
-      currentFoods.filter((food) => (Date.now() - food.start) < 10000)
-    );
-  }, []);
-  //remove poison
-  const removePoison = useCallback(() => {
-    // console.log("delete poison auto");
-    setPoison((currentPoison) =>
-      currentPoison.filter((poison) => (Date.now() - poison.start) < 10000)
-    );
+  const isBlocked = useCallback(
+    (cell) => isSnake(cell) || isFood(cell) || isPoison(cell),
+    [isFood, isPoison, isSnake]
+  );
+  const addObject = useCallback(
+    (flag) => {
+      let newObject = getRandomCell();
+      while (isBlocked(newObject)) {
+        newObject = getRandomCell();
+      }
+      if (flag === "food")
+        setFoods((currentFoods) => [...currentFoods, newObject]);
+      else setPoison((currentPoison) => [...currentPoison, newObject]);
+    },
+    [isBlocked]
+  );
+  const removeObject = useCallback((type) => {
+    if (type === "food")
+      setFoods((currentFoods) =>
+        currentFoods.filter((food) => Date.now() - food.start < 10000)
+      );
+    else
+      setPoison((currentPoison) =>
+        currentPoison.filter((poison) => Date.now() - poison.start < 10000)
+      );
   }, []);
 
   // update foods and poisons whenever head touches a food or a poison
@@ -197,24 +191,24 @@ const UseSnake = () => {
     if (isFood(head)) {
       console.log("ate food");
       setFoods((currentFoods) =>
-        currentFoods.filter((food) => food.x !== head.x && food.y !== head.y)
+        currentFoods.filter((food) => !(food.x === head.x && food.y === head.y))
       );
     }
     if (isPoison(head)) {
       console.log("ate poison");
       setPoison((currentPoison) =>
         currentPoison.filter(
-          (poison) => poison.x !== head.x && poison.y !== head.y
+          (poison) => !(poison.x === head.x && poison.y === head.y)
         )
       );
     }
   }, [isFood, isPoison, snake]);
 
-  UseInterval(addFood, 3000);
+  UseInterval(() => addObject("food"), 3000);
+  UseInterval(() => addObject("poison"), 1000);
   UseInterval(runSingleStep, 300);
-  UseInterval(removeFood, 50);
-  UseInterval(addPoison, 4000);
-  UseInterval(removePoison, 100);
+  UseInterval(() => removeObject("food"),50);
+  UseInterval(()=> removeObject("poison"), 100);
 
   const changeDir = (checkDir, newDir) => {
     setDirection((direction) => {
