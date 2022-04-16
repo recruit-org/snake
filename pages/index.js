@@ -12,6 +12,7 @@ const CellType = {
   Snake: "snake",
   Food: "food",
   Empty: "empty",
+  Poison: "poison",
 };
 
 const Direction = {
@@ -34,6 +35,15 @@ const Cell = ({ x, y, type, remaining }) => {
       case CellType.Food:
         return {
           backgroundColor: "tomato",
+          borderRadius: 20,
+          width: 32,
+          height: 32,
+          transform: `scale(${0.5 + remaining / 20})`,
+        };
+
+      case CellType.Poison:
+        return {
+          backgroundColor: "blue",
           borderRadius: 20,
           width: 32,
           height: 32,
@@ -100,6 +110,7 @@ const useSnake = () => {
   const [direction, setDirection] = useState(getInitialDirection());
 
   const [foods, setFoods] = useState([]);
+  const [poisons, setPoisons] = useState([]);
 
   const score = snake.length - 3;
 
@@ -110,6 +121,7 @@ const useSnake = () => {
   const resetGame = useCallback(() => {
     setFoods([]);
     setDirection(getInitialDirection());
+    setPoisons([]);
   }, []);
 
   const removeFoods = useCallback(() => {
@@ -119,11 +131,23 @@ const useSnake = () => {
     );
   }, []);
 
+  const removePoisons = useCallback(() => {
+    setPoisons((currentPoisons) =>
+      currentPoisons.filter(
+        (poison) => Date.now() - poison.createdAt <= 10 * 1000
+      )
+    );
+  }, []);
+
   // ?. is called optional chaining
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
   const isFood = useCallback(
-    ({ x, y }) => foods.some((food) => food.x === x && food.y === y),
+    ({ x, y }) => foods.find((food) => food.x === x && food.y === y),
     [foods]
+  );
+  const isPoison = useCallback(
+    ({ x, y }) => poisons.find((poison) => poison.x === x && poison.y === y),
+    [poisons]
   );
 
   const isSnake = useCallback(
@@ -132,13 +156,25 @@ const useSnake = () => {
     [snake]
   );
 
+  const isAllowedCell = useCallback(
+    (newCell) => isSnake(newCell) || isFood(newCell || isPoison(newCell)),
+    [isFood, isPoison, isSnake]
+  );
   const addFood = useCallback(() => {
     let newFood = getRandomCell();
-    while (isSnake(newFood) || isFood(newFood)) {
+    while (isAllowedCell(newFood)) {
       newFood = getRandomCell();
     }
     setFoods((currentFoods) => [...currentFoods, newFood]);
-  }, [isFood, isSnake]);
+  }, [isAllowedCell]);
+
+  const addPoison = useCallback(() => {
+    let newPoison = getRandomCell();
+    while (isAllowedCell(newPoison)) {
+      newPoison = getRandomCell();
+    }
+    setPoisons((currentPoisons) => [...currentPoisons, newPoison]);
+  }, [isAllowedCell]);
 
   // move the snake
   const runSingleStep = useCallback(() => {
@@ -156,8 +192,8 @@ const useSnake = () => {
       // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax
       const newSnake = [newHead, ...snake];
 
-      // reset the game if the snake hit itself
-      if (isSnake(newHead)) {
+      // reset the game if the snake hit itself or poison
+      if (isSnake(newHead) || isPoison(newHead)) {
         resetGame();
         return getDefaultSnake();
       }
@@ -176,11 +212,13 @@ const useSnake = () => {
 
       return newSnake;
     });
-  }, [direction, isFood, isSnake, resetGame]);
+  }, [direction.x, direction.y, isFood, isPoison, isSnake, resetGame]);
 
-  useInterval(runSingleStep, 200);
+  useInterval(runSingleStep, 1);
   useInterval(addFood, 3000);
   useInterval(removeFoods, 100);
+  useInterval(addPoison, 3000);
+  useInterval(removePoisons, 100);
 
   useEffect(() => {
     const handleDirection = (direction, oppositeDirection) => {
@@ -231,6 +269,16 @@ const useSnake = () => {
           );
       } else if (isSnake({ x, y })) {
         type = CellType.Snake;
+      } else if (isPoison({ x, y })) {
+        type = CellType.Poison;
+        remaining =
+          10 -
+          Math.round(
+            (Date.now() -
+              poisons.find((poison) => poison.x === x && poison.y === y)
+                .createdAt) /
+              1000
+          );
       }
       cells.push(
         <Cell key={`${x}-${y}`} x={x} y={y} type={type} remaining={remaining} />
