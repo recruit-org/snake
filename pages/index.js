@@ -80,7 +80,7 @@ const getRandomCell = (type) => ({
 
 //custom hook
 //controller
-const UseInterval = (func, dir) => {
+const useInterval = (func, dir) => {
   const timer = useRef(Date.now());
   const createCallback = useCallback(() => {
     if (Date.now() - timer.current > dir) {
@@ -94,7 +94,7 @@ const UseInterval = (func, dir) => {
     return () => clearInterval(interval);
   }, [createCallback]);
 };
-const UseSnake = () => {
+const GetSnake = () => {
   const getDefaultSnake = () => [
     { x: 8, y: 12 },
     { x: 7, y: 12 },
@@ -107,6 +107,9 @@ const UseSnake = () => {
   const score = snake.length - 3;
 
   const finding = ({ x, y }, arr, type) => {
+    //for snake
+    if (type === undefined)
+      return arr.find((position) => position.x === x && position.y === y);
     return arr.find(
       (position) =>
         position.x === x && position.y === y && position.type === type
@@ -114,12 +117,10 @@ const UseSnake = () => {
   };
 
   //checking cells
-  const isObject = useCallback(
+  const isObjectOrSnake = useCallback(
     ({ x, y }, type) => {
-      if (type === CellType.Food) return finding({ x, y }, objects, type);
-      else if (type === CellType.Poison)
-        return finding({ x, y }, objects, type);
-      else if (type === CellType.Snake) return finding({ x, y }, snake);
+      if (type === CellType.Snake) return finding({ x, y }, snake);
+      else return finding({ x, y }, objects, type);
     },
     [objects, snake]
   );
@@ -144,38 +145,38 @@ const UseSnake = () => {
       const newSnake = [newHead, ...snake];
 
       // remove tail when head doesnt eat food
-      if (!isObject(newHead, CellType.Food)) {
+      if (!isObjectOrSnake(newHead, CellType.Food)) {
         newSnake.pop();
       }
       //remove again when eats poison
-      if (isObject(newHead, CellType.Poison)) {
+      if (isObjectOrSnake(newHead, CellType.Poison)) {
         newSnake.pop();
       }
-      if (isObject(newHead, CellType.Snake) || score < 0) {
+      if (isObjectOrSnake(newHead, CellType.Snake) || score < 0) {
         resetGame();
       }
 
       return newSnake;
     });
-  }, [direction.x, direction.y, isObject, resetGame, score]);
+  }, [direction.x, direction.y, isObjectOrSnake, resetGame, score]);
 
-  const isBlocked = useCallback(
-    (cell) =>
-      isObject(cell, CellType.Snake) ||
-      isObject(cell, CellType.Food) ||
-      isObject(cell, CellType.Poison),
-    [isObject]
-  );
   const addObject = useCallback(
     (type) => {
       let newObject = getRandomCell(type);
-      while (isBlocked(newObject)) {
+      while (
+        isObjectOrSnake(
+          newObject,
+          CellType.Snake ||
+            isObjectOrSnake(newObject, CellType.Food) ||
+            isObjectOrSnake(isObjectOrSnake, CellType.Poison)
+        )
+      ) {
         newObject = getRandomCell(type);
       }
       console.log(newObject.type);
       setObjects((currentObjects) => [...currentObjects, newObject]);
     },
-    [isBlocked]
+    [isObjectOrSnake]
   );
   const removeObject = useCallback(() => {
     setObjects((currentObjects) =>
@@ -188,8 +189,8 @@ const UseSnake = () => {
   // update foods and poisons whenever head touches a food or a poison
   useEffect(() => {
     const head = snake[0];
-    if (isObject(head, CellType.Food)) {
-      console.log("ate object");
+    if (isObjectOrSnake(head, CellType.Food)) {
+      console.log("ate food");
       setObjects((currentObjects) =>
         currentObjects.filter(
           (currentObject) =>
@@ -197,13 +198,13 @@ const UseSnake = () => {
         )
       );
     }
-  }, [isObject, snake]);
+  }, [isObjectOrSnake, snake]);
 
-  UseInterval(() => addObject(CellType.Food), 3000);
-  UseInterval(() => addObject(CellType.Poison), 1000);
-  UseInterval(runSingleStep, 300);
-  UseInterval(() => removeObject(CellType.Food), 50);
-  UseInterval(() => removeObject(CellType.Poison), 100);
+  useInterval(() => addObject(CellType.Food), 3000);
+  useInterval(() => addObject(CellType.Poison), 1000);
+  useInterval(runSingleStep, 300);
+  useInterval(() => removeObject(), 50);
+  useInterval(() => removeObject(), 100);
 
   const changeDir = (checkDir, newDir) => {
     setDirection((direction) => {
@@ -241,16 +242,16 @@ const UseSnake = () => {
     for (let y = 0; y < Config.height; y++) {
       let type = CellType.Empty,
         remaining = undefined;
-      if (isObject({ x, y }, CellType.Food)) {
+      if (isObjectOrSnake({ x, y }, CellType.Food)) {
         type = CellType.Food;
         remaining =
           10 -
           Math.round(
             (Date.now() - finding({ x, y }, objects, type).start) / 1000
           );
-      } else if (isObject({ x, y }, CellType.Snake)) {
+      } else if (isObjectOrSnake({ x, y }, CellType.Snake)) {
         type = CellType.Snake;
-      } else if (isObject({ x, y }, CellType.Poison)) {
+      } else if (isObjectOrSnake({ x, y }, CellType.Poison)) {
         type = CellType.Poison;
         remaining =
           10 -
@@ -263,12 +264,12 @@ const UseSnake = () => {
       );
     }
   }
-  return { score, isObject, cells };
+  return { score, isObjectOrSnake, cells };
 };
 
 //view
 const Snake = () => {
-  const { score, cells } = UseSnake();
+  const { score, cells } = GetSnake();
   return (
     <div className={styles.container}>
       <div
