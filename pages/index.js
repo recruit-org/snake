@@ -103,20 +103,22 @@ const UseSnake = () => {
   // snake[0] is head and snake[snake.length - 1] is tail
   const [snake, setSnake] = useState(getDefaultSnake());
   const [direction, setDirection] = useState(Direction.Right);
-  // const [foods, setFoods] = useState([]);
-  // const [poisons, setPoison] = useState([]);
   const [objects, setObjects] = useState([]);
   const score = snake.length - 3;
 
   const finding = ({ x, y }, arr, type) => {
-    return arr.find((position) => position.x === x && position.y === y && position.type===type);
+    return arr.find(
+      (position) =>
+        position.x === x && position.y === y && position.type === type
+    );
   };
 
   //checking cells
   const isObject = useCallback(
     ({ x, y }, type) => {
-      if (type === CellType.Food) return finding({ x, y }, objects,type);
-      else if (type === CellType.Poison) return finding({ x, y }, objects, type);
+      if (type === CellType.Food) return finding({ x, y }, objects, type);
+      else if (type === CellType.Poison)
+        return finding({ x, y }, objects, type);
       else if (type === CellType.Snake) return finding({ x, y }, snake);
     },
     [objects, snake]
@@ -170,15 +172,17 @@ const UseSnake = () => {
       while (isBlocked(newObject)) {
         newObject = getRandomCell(type);
       }
-        console.log(newObject.type)
-        setObjects((currentObjects) => [...currentObjects, newObject]);
+      console.log(newObject.type);
+      setObjects((currentObjects) => [...currentObjects, newObject]);
     },
     [isBlocked]
   );
   const removeObject = useCallback(() => {
-      setObjects((currentObjects) =>
-        currentObjects.filter((currentObject) => Date.now() - currentObject.start < 10000)
-      );
+    setObjects((currentObjects) =>
+      currentObjects.filter(
+        (currentObject) => Date.now() - currentObject.start < 10000
+      )
+    );
   }, []);
 
   // update foods and poisons whenever head touches a food or a poison
@@ -187,7 +191,10 @@ const UseSnake = () => {
     if (isObject(head, CellType.Food)) {
       console.log("ate object");
       setObjects((currentObjects) =>
-        currentObjects.filter((currentObject) => !(currentObject.x === head.x && currentObject.y === head.y))
+        currentObjects.filter(
+          (currentObject) =>
+            !(currentObject.x === head.x && currentObject.y === head.y)
+        )
       );
     }
   }, [isObject, snake]);
@@ -237,14 +244,19 @@ const UseSnake = () => {
       if (isObject({ x, y }, CellType.Food)) {
         type = CellType.Food;
         remaining =
-          10 - Math.round((Date.now() - finding({ x, y }, objects, type).start) / 1000);
+          10 -
+          Math.round(
+            (Date.now() - finding({ x, y }, objects, type).start) / 1000
+          );
       } else if (isObject({ x, y }, CellType.Snake)) {
         type = CellType.Snake;
       } else if (isObject({ x, y }, CellType.Poison)) {
         type = CellType.Poison;
         remaining =
           10 -
-          Math.round((Date.now() - finding({ x, y }, objects, type).start) / 1000);
+          Math.round(
+            (Date.now() - finding({ x, y }, objects, type).start) / 1000
+          );
       }
       cells.push(
         <Cell key={`${x}-${y}`} x={x} y={y} type={type} remaining={remaining} />
