@@ -3,5 +3,9 @@
   "env": {
     "es6": true,
     "browser": true
-  }
+  },
+  "rules": {
+    "react/exhaustive-deps": "off"
+  },
+  "plugins": ["react", "react-hooks"]
 }
