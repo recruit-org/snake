@@ -1,5 +1,6 @@
 import dynamic from "next/dynamic";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+// import { useMemo } from "react/cjs/react.production.min";
 // import { useCallback } from "react/cjs/react.production.min";
 import styles from "../styles/Snake.module.css";
 
@@ -23,29 +24,31 @@ const Direction = {
   Bottom: { x: 0, y: 1 },
 };
 
-const Cell = ({ x, y, type }) => {
+const Cell = ({ x, y, type, remaining }) => {
   const getStyles = () => {
     switch (type) {
       case CellType.Snake:
         return {
-          backgroundColor: "yellowgreen",
+          backgroundColor: "#00FF00	",
           borderRadius: 8,
           padding: 2,
         };
 
       case CellType.GoodFood:
         return {
-          backgroundColor: "darkorange",
+          backgroundColor: "#FF4500	",
           borderRadius: 20,
           width: 32,
           height: 32,
+          transform: `scale(${0.5 + remaining / 20})`,
         };
       case CellType.BadFood:
         return {
-          backgroundColor: "red",
+          backgroundColor: "darkred",
           borderRadius: 20,
           width: 32,
           height: 32,
+          transform: `scale(${0.5 + remaining / 20})`,
         };
 
       default:
@@ -54,6 +57,7 @@ const Cell = ({ x, y, type }) => {
   };
   return (
     <div
+      key={`${x}-${y}`}
       className={styles.cellContainer}
       style={{
         left: x * Config.cellSize,
@@ -62,7 +66,9 @@ const Cell = ({ x, y, type }) => {
         height: Config.cellSize,
       }}
     >
-      <div className={styles.cell} style={getStyles()}></div>
+      <div className={styles.cell} style={getStyles()}>
+        {remaining}
+      </div>
     </div>
   );
 };
@@ -74,27 +80,29 @@ const getRandomCell = () => ({
 });
 
 const useInterval = (callback, duration) => {
-  const time = useRef(0);
-  const wrappedCallback = useCallback(() => {
-    if (Date.now() - time.current >= duration) {
-      console.log("callback", callback);
-      time.current = Date.now();
-      callback();
-    }
-  }, [callback, duration]);
+  // const time = useRef(0);
+  // const wrappedCallback = useCallback(() => {
+  //   if (Date.now() - time.current >= duration) {
+  //     console.log("callback", callback);
+  //     time.current = Date.now();
+  //     callback();
+  //   }
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
+
   useEffect(() => {
-    const interval = setInterval(wrappedCallback, 1000 / 60);
+    const interval = setInterval(() => callbackRef.current(), duration);
     return () => clearInterval(interval);
-  }, [wrappedCallback, duration]);
+  }, [duration]);
 };
+const getDefaultSnake = () => [
+  { x: 8, y: 12 },
+  { x: 7, y: 12 },
+  { x: 6, y: 12 },
+];
 
 const useSnake = () => {
-  const getDefaultSnake = () => [
-    { x: 8, y: 12 },
-    { x: 7, y: 12 },
-    { x: 6, y: 12 },
-  ];
-  const grid = useRef();
+  // const grid = useRef();
 
   // snake[0] is head and snake[snake.length - 1] is tail
   const [snake, setSnake] = useState(getDefaultSnake());
@@ -178,39 +186,38 @@ const useSnake = () => {
       const newSnake = [newHead, ...snake];
 
       // remove tail when head is not in the food
-      // if(!isFood(newHead)){
-      // newSnake.pop();}
       if (!isFood(newHead)) {
         newSnake.pop();
       } else {
-        //   let gameHasBeenReset = false;
-        //   foods.forEach(
-        //     // (food) => !(food.x == newHead.x && food.y === newHead.y)
-        //     (food) => {
-        //       if (gameHasBeenReset) {
-        //         return;
-        //       }
-        //       if (
-        //         food.x == newHead.x &&
-        //         food.y === newHead.y &&
-        //         food.type === "badFood"
-        //       ) {
-        //         gameHasBeenReset = true;
-        //         resetGame();
-        //       }
-        //     }
-        //     // it will remove that food which is matched with the position of snake
-        //   );
-        //   if (gameHasBeenReset) {
-        //     return;
-        //   }
         setFoods((currentFoods) =>
           currentFoods.filter(
-            (food) => !(food.x == newHead.x && food.y === newHead.y)
-            // it will remove that food which is matched with the position of snake
+            (food) => !(food.x === newHead.x && food.y === newHead.y)
           )
         );
       }
+
+      //  let gameHasBeenReset = false;
+      //   foods.forEach(
+      //     // (food) => !(food.x == newHead.x && food.y === newHead.y)
+      //     (food) => {
+      //       if (gameHasBeenReset) {
+      //         return;
+      //       }
+      //       if (
+      //         food.x == newHead.x &&
+      //         food.y === newHead.y &&
+      //         food.type === "badFood"
+      //       ) {
+      //         gameHasBeenReset = true;
+      //         resetGame();
+      //       }
+      //     }
+      //     // it will remove that food which is matched with the position of snake
+      //   );
+      //   if (gameHasBeenReset) {
+      //     return;
+      //   }
+      // it will remove that food which is matched with the position of snake
       if (isPoison(newHead)) {
         resetGame();
       }
@@ -299,6 +306,13 @@ const useSnake = () => {
 
     return () => window.removeEventListener("keydown", handleNavigation);
   }, []);
+  // if (isPoison(newHead)) {
+  //   setPoisons((CurrentPoisons) =>
+  //     CurrentPoisons.filter(
+  //       (poisons) => !(poison.x === newHead.x && poison.y === newHead.y)
+  //     )
+  //   );
+  // }
 
   // ?. is called optional chaining
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
@@ -307,30 +321,66 @@ const useSnake = () => {
   // const isSnake = ({ x, y }) =>
   // snake.find((position) => position.x === x && position.y === y);
   //  console.log(isSnake,snake)
-  return { score, isSnake, isFood, isPoison };
-};
-// update score whenever head touches a food
+  // return { score, isSnake, isFood, isPoison };
 
-const Snake = () => {
-  const { score, isSnake, isFood, isPoison } = useSnake();
+  // update score whenever head touches a food
 
-  const cells = [];
-  for (let x = 0; x < Config.width; x++) {
-    for (let y = 0; y < Config.height; y++) {
-      let type = CellType.Empty;
-      if (isFood({ x, y })) {
-        type = CellType.GoodFood;
+  // const Snake = () => {
+  // const { score, isSnake, isFood, isPoison } = useSnake();
+
+  const cells = useMemo(() => {
+    const elements = [];
+    for (let x = 0; x < Config.width; x++) {
+      for (let y = 0; y < Config.height; y++) {
+        let type = CellType.Empty,
+          remaining = undefined;
+        if (isFood({ x, y })) {
+          type = CellType.GoodFood;
+          remaining =
+            10 -
+            Math.round(
+              (Date.now() -
+                foods.find((food) => food.x === x && food.y === y).createTime) /
+                1000
+            );
+        }
+
+        if (isPoison({ x, y })) {
+          (type = CellType.BadFood),
+            (remaining =
+              10 -
+              Math.round(
+                (Date.now() -
+                  poisons.find((poison) => poison.x === x && poison.y === y)
+                    .createTime) /
+                  1000
+              ));
+        } else if (isSnake({ x, y })) {
+          type = CellType.Snake;
+        }
+        elements.push(
+          <Cell
+            key={`${x}-${y}`}
+            x={x}
+            y={y}
+            type={type}
+            remaining={remaining}
+          />
+        );
       }
-      if (isPoison({ x, y })) {
-        type = CellType.BadFood;
-      } else if (isSnake({ x, y })) {
-        type = CellType.Snake;
-      }
-      cells.push(<Cell key={`${x}-${y}`} x={x} y={y} type={type} />);
     }
-    // return{snake,cells,score}
-  }
-  // const Snake =() =>{const{score,isSnake,isFood}= useSnake()
+    return elements;
+  }, [poisons, foods, isFood, isPoison, isSnake]);
+  return {
+    snake,
+    score,
+    cells,
+  };
+};
+
+// const Snake =() =>{const{score,isSnake,isFood}= useSnake()
+const Snake = () => {
+  const { score, cells } = useSnake();
 
   return (
     <div className={styles.container}>
