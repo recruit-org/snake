@@ -14,8 +14,6 @@ const UseSnake = () => {
   const [snake, setSnake] = useState(getDefaultSnake());
   const [direction, setDirection] = useState(getInitialDirection());
 
-  // const [foods, setFoods] = useState([]);
-  // const [poison, setPoison] = useState([]);
   const [objects, setObjects] = useState([]);
 
   const score = snake.length - 3;
@@ -23,8 +21,6 @@ const UseSnake = () => {
   const resetGame = useCallback(() => {
     setSnake(getDefaultSnake());
     setDirection(getInitialDirection());
-    // setFoods([]);
-    // setPoison([]);
     setObjects([]);
   }, []);
 
@@ -52,35 +48,21 @@ const UseSnake = () => {
   //suggested addObject method for food and poison ---------------->
   const addObject = useCallback((type) => {
     let newObject = getRandomCell(type);
-    while (isSnake(newObject) || isFood(newObject)) {
+    while (isSnake(newObject) || isFood(newObject) || isPoison(newObject)) {
       newObject = getRandomCell(type);
     }
     setObjects((currentObjects) => [...currentObjects, newObject]);
-    // if (type === "food") {
-    //   setObjects((currentFoods) => [...currentFoods, newObject]);
-    // } else {
-    //   setObjects((currentPoison) => [...currentPoison, newObject]);
-    // }
   }, []);
+
   //removeObject method for removing food or poison-------------->
   const removeObject = useCallback((type) => {
-    if (type == "poison") {
-      setObjects((currentPoisons) =>
-        currentPoisons.filter(
-          (poison) =>
-            Date.now() - poison.createdAt <= 10 * 1000 &&
-            poison.type === "poison"
-        )
-      );
-    } else {
-      setObjects((currentFoods) =>
-        currentFoods.filter(
-          (food) =>
-            Date.now() - food.createdAt <= 10 * 1000 && food.type === "food"
-        )
-      );
-    }
+    setObjects((currentObjects) =>
+      currentObjects.filter(
+        (object) => Date.now() - object.createdAt <= 10 * 1000
+      )
+    );
   }, []);
+
   //moving the snake
   const runSingleStep = useCallback(() => {
     setSnake((snake) => {
