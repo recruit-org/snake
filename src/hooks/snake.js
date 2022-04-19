@@ -24,11 +24,10 @@ const UseSnake = () => {
     setObjects([]);
   }, []);
 
-  const isFood = useCallback(
-    ({ x, y }) =>
-      objects.some(
-        (food) => food.x === x && food.y === y && food.type === "food"
-      ),
+  //checking if the object is of the given type-------------------->
+  const isObjectOfType = useCallback(
+    ({ x, y }, type) =>
+      objects.some((obj) => obj.x === x && obj.y === y && obj.type === type),
     [objects]
   );
 
@@ -38,17 +37,14 @@ const UseSnake = () => {
     [snake]
   );
 
-  //checking if it's a poison cell
-  const isPoison = useCallback(
-    ({ x, y }) =>
-      objects.some((p) => p.x === x && p.y === y && p.type === "poison"),
-    [objects]
-  );
-
   //suggested addObject method for food and poison ---------------->
   const addObject = useCallback((type) => {
     let newObject = getRandomCell(type);
-    while (isSnake(newObject) || isFood(newObject) || isPoison(newObject)) {
+    while (
+      isSnake(newObject) ||
+      isObjectOfType(newObject, CellType.Food) ||
+      isObjectOfType(newObject, CellType.Poison)
+    ) {
       newObject = getRandomCell(type);
     }
     setObjects((currentObjects) => [...currentObjects, newObject]);
@@ -74,11 +70,11 @@ const UseSnake = () => {
       const newSnake = [newHead, ...snake];
 
       //reset the game if snake touches its own body
-      if (isSnake(newHead) || isPoison(newHead)) {
+      if (isSnake(newHead) || isObjectOfType(newHead, CellType.Poison)) {
         resetGame();
         return getDefaultSnake();
       }
-      if (!isFood(newHead)) {
+      if (!isObjectOfType(newHead, CellType.Food)) {
         newSnake.pop();
       } else {
         setObjects((currentFoods) =>
@@ -87,20 +83,20 @@ const UseSnake = () => {
               !(
                 food.x === newHead.x &&
                 food.y === newHead.y &&
-                food.type === "food"
+                food.type === CellType.Food
               )
           )
         );
       }
       return newSnake;
     });
-  }, [direction, isFood, isSnake, resetGame]);
+  }, [direction, isObjectOfType, isSnake, resetGame]);
 
   useInterval(runSingleStep, 200);
-  useInterval(() => addObject("food"), 3000);
-  useInterval(() => removeObject("food"), 100);
-  useInterval(() => addObject("poison"), 15000);
-  useInterval(() => removeObject("poison"), 100);
+  useInterval(() => addObject(CellType.Food), 3000);
+  useInterval(() => removeObject(CellType.Food), 100);
+  useInterval(() => addObject(CellType.Poison), 15000);
+  useInterval(() => removeObject(CellType.Poison), 100);
 
   useEffect(() => {
     const controlDirection = (direction, oppositeDirection) => {
@@ -139,20 +135,21 @@ const UseSnake = () => {
       for (let y = 0; y < Config.height; y++) {
         let type = CellType.Empty,
           remaining = undefined;
-        if (isFood({ x, y })) {
+        if (isObjectOfType({ x, y }, CellType.Food)) {
           type = CellType.Food;
           remaining =
             10 -
             Math.round(
               (Date.now() -
                 objects.find(
-                  (food) => food.x === x && food.y === y && food.type === "food"
+                  (food) =>
+                    food.x === x && food.y === y && food.type === CellType.Food
                 ).createdAt) /
                 1000
             );
         } else if (isSnake({ x, y })) {
           type = CellType.Snake;
-        } else if (isPoison({ x, y })) {
+        } else if (isObjectOfType({ x, y }, CellType.Poison)) {
           type = CellType.Poison;
         }
         elements.push(
@@ -167,7 +164,7 @@ const UseSnake = () => {
       }
     }
     return elements;
-  }, [objects, isFood, isSnake]);
+  }, [objects, isObjectOfType, isSnake]);
 
   return { snake, cells, score };
 };
