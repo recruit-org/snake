@@ -51,7 +51,7 @@ const UseSnake = () => {
   }, []);
 
   //removeObject method for removing food or poison-------------->
-  const removeObject = useCallback((type) => {
+  const removeObject = useCallback(() => {
     setObjects((currentObjects) =>
       currentObjects.filter(
         (object) => Date.now() - object.createdAt <= 10 * 1000
@@ -94,9 +94,8 @@ const UseSnake = () => {
 
   useInterval(runSingleStep, 200);
   useInterval(() => addObject(CellType.Food), 3000);
-  useInterval(() => removeObject(CellType.Food), 100);
   useInterval(() => addObject(CellType.Poison), 15000);
-  useInterval(() => removeObject(CellType.Poison), 100);
+  useInterval(removeObject, 100);
 
   useEffect(() => {
     const controlDirection = (direction, oppositeDirection) => {
