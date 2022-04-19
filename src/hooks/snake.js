@@ -49,7 +49,7 @@ const UseSnake = () => {
     [poison]
   );
 
-  //suggested method ---------------->
+  //suggested addObject method for food and poison ---------------->
   const addObject = useCallback((type) => {
     let newObject = getRandomCell();
     while (isSnake(newObject) || isFood(newObject)) {
@@ -60,33 +60,28 @@ const UseSnake = () => {
     } else {
       setPoison((currentPoison) => [...currentPoison, newObject]);
     }
-  });
-
-  const addFood = useCallback(() => {
-    let newFood = getRandomCell();
-    while (isSnake(newFood) || isFood(newFood)) {
-      newFood = getRandomCell();
-    }
-    setFoods((currentFoods) => [...currentFoods, newFood]);
-  }, [isFood, isSnake]);
-
-  //adding poison
-  const addPoison = useCallback(() => {
-    let newPoison = getRandomCell();
-    while (isSnake(newPoison) || isFood(newPoison)) {
-      newPoison = getRandomCell();
-    }
-    setPoison((currentPoison) => [...currentPoison, newPoison]);
-  }, [isFood, isSnake]);
+  }, []);
   //removing poison
   const removePoison = useCallback(() => {
     setPoison((currentPoisons) =>
       currentPoisons.filter(
-        (poison) => Date.now() - poison.createdAt <= 15 * 1000
+        (poison) => Date.now() - poison.createdAt <= 10 * 1000
       )
     );
   }, []);
-
+  const removeObject = useCallback((type) => {
+    if (type == "poison") {
+      setPoison((currentPoisons) =>
+        currentPoisons.filter(
+          (poison) => Date.now() - poison.createdAt <= 10 * 1000
+        )
+      );
+    } else {
+      setFoods((currentFoods) =>
+        currentFoods.filter((food) => Date.now() - food.createdAt <= 10 * 1000)
+      );
+    }
+  }, []);
   //moving the snake
   const runSingleStep = useCallback(() => {
     setSnake((snake) => {
@@ -117,9 +112,9 @@ const UseSnake = () => {
 
   useInterval(runSingleStep, 200);
   useInterval(() => addObject("food"), 3000);
-  useInterval(removeFood, 100);
+  useInterval(() => removeObject("food"), 100);
   useInterval(() => addObject("poison"), 15000);
-  useInterval(removePoison, 100);
+  useInterval(() => removeObject("poison"), 100);
 
   useEffect(() => {
     const controlDirection = (direction, oppositeDirection) => {
