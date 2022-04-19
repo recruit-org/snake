@@ -17,9 +17,6 @@ const useSnake = () => {
 
     { x: 4, y: 10, createTime: Date.now(), type: "poison" },
   ]);
-  //   const [poisons, setPoisons] = useState([
-  //     { x: 5, y: -10, createTime: Date.now() },
-  //   ]);
   const isObject = useCallback(
     ({ x, y }) => objects.find((object) => object.x === x && object.y === y),
     [objects]
@@ -56,21 +53,7 @@ const useSnake = () => {
     [isObject, isSnake]
   );
 
-  //   const addPoison = useCallback(() => {
-  //     let newPoison = getRandomCell();
-  //     while (isSnake(newPoison) || isPoison(newPoison)) {
-  //       newPoison = getRandomCell();
-  //     }
-
-  //     setPoisons((CurrentPoisons) => [...CurrentPoisons, newPoison]);
-  //   }, [isPoison, isSnake]);
-
-  //   const isPoison = useCallback(
-  //     ({ x, y }) => poisons.some((poison) => poison.x === x && poison.y === y),
-  //     [poisons]
-  //   );
-
-  const isSnake = useCallback(
+   const isSnake = useCallback(
     ({ x, y }) =>
       snake.find((position) => position.x === x && position.y === y),
     [snake]
@@ -85,14 +68,7 @@ const useSnake = () => {
       )
     );
   }, []);
-  //   const removePoison = useCallback(() => {
-  //     setPoisons((CurrentPoisons) =>
-  //       CurrentPoisons.filter((poison) =>
-  //         Math.floor(Date.now() - poison.createTime <= 5 * 1000)
-  //       )
-  //     );
-  //   }, []);
-
+ 
   // move the snake
 
   const runSingleStep = useCallback(() => {
@@ -117,36 +93,8 @@ const useSnake = () => {
           )
         );
       }
-      //   if (isPoison(newHead)) {
-      //     setPoisons((CurrentPoisons) =>
-      //       CurrentPoisons.filter(
-      //         (poison) => !(poison.x === newHead.x && poison.y === newHead.y)
-      //       )
-      //     );
-      //   }
-
-      //  let gameHasBeenReset = false;
-      //   foods.forEach(
-      //     // (food) => !(food.x == newHead.x && food.y === newHead.y)
-      //     (food) => {
-      //       if (gameHasBeenReset) {
-      //         return;
-      //       }
-      //       if (
-      //         food.x == newHead.x &&
-      //         food.y === newHead.y &&
-      //         food.type === "badFood"
-      //       ) {
-      //         gameHasBeenReset = true;
-      //         resetGame();
-      //       }
-      //     }
-      //     // it will remove that food which is matched with the position of snake
-      //   );
-      //   if (gameHasBeenReset) {
-      //     return;
-      //   }
-      // it will remove that food which is matched with the position of snake
+     
+     
       if (isObjectOfType({ x: newHead.x, y: newHead.y, type: "poison" })) {
         resetGame();
       }
@@ -158,52 +106,23 @@ const useSnake = () => {
       return newSnake;
     });
 
-    // const timer = setInterval(runSingleStep, 1000);
-
-    // return () => clearInterval(timer);
-  }, [isObjectOfType, direction.x, direction.y, isSnake, resetGame]);
+   [isObjectOfType, direction.x, direction.y, isSnake, resetGame]);
 
   useEffect(() => {
     const head = snake[0];
     if (isObject(head)) {
-      // setScore((score) => {
-      //   return score + 1;
-      // });
-
-      addNewObject("food");
+    ("food");
     }
-    //   let newFood = getRandomCell();
-    //   while (isSnake(newFood)) {
-    //     newFood = getRandomCell();
-    //   }
-    //   setFoods(newFood)
-    // }
+  
   }, [addNewObject, isObject, snake]);
   // difference between setinerval and set timeout ....and  array.find and some
 
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     addNewFood();
-  //   }, 3 * 1000);
-  //   return () => {
-  //     clearInterval(interval);
-  //   };
-  // }, [addNewFood]);
-
-  // useEffect(() => {
-  //   const disappearFood = setInterval(() => {
-  //     removeEachFood();
-  //   }, 1000);
-  //   return () => clearInterval(disappearFood);
-  // }, []);
-
-  useInterval(() => addNewObject("food"), 3 * 1000);
+   useInterval(() => addNewObject("food"), 3 * 1000);
   useInterval(() => removeObject("food"), 100);
   useInterval(() => addNewObject("poison"), 5 * 1000);
   useInterval(() => removeObject("poison"), 200);
   useInterval(runSingleStep, 100);
-  //   useInterval(addNewObject(CellType.BadFood), 3 * 1000);
-  //   useInterval(removeObject(CellType.BadFood), 100);
+
 
   useEffect(() => {
     const handleDirection = (direction, oppositeDirection) => {
@@ -237,28 +156,9 @@ const useSnake = () => {
 
     return () => window.removeEventListener("keydown", handleNavigation);
   }, []);
-  // if (isPoison(newHead)) {
-  //   setPoisons((CurrentPoisons) =>
-  //     CurrentPoisons.filter(
-  //       (poisons) => !(poison.x === newHead.x && poison.y === newHead.y)
-  //     )
-  //   );
-  // }
-
-  // ?. is called optional chaining
+   // ?. is called optional chaining
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
-  // const isFood = ({ x, y }) => foods.some((food)=>food.x === x && food.y === y);
-  // console.log(isFood)
-  // const isSnake = ({ x, y }) =>
-  // snake.find((position) => position.x === x && position.y === y);
-  //  console.log(isSnake,snake)
-  // return { score, isSnake, isFood, isPoison };
-
-  // update score whenever head touches a food
-
-  // const Snake = () => {
-  // const { score, isSnake, isFood, isPoison } = useSnake();
-
+  
   const cells = useMemo(() => {
     const elements = [];
     for (let x = 0; x < Config.width; x++) {
