@@ -12,10 +12,26 @@ const useSnake = () => {
   const [snake, setSnake] = useState(getDefaultSnake());
   const [direction, setDirection] = useState(Direction.Right);
 
-  const [foods, setFoods] = useState([{ x: 4, y: 10, createTime: Date.now() }]);
-  const [poisons, setPoisons] = useState([
-    { x: 5, y: -10, createTime: Date.now() },
+  const [objects, setObjects] = useState([
+    { x: 4, y: 10, createTime: Date.now(), type: "food" },
+
+    { x: 4, y: 10, createTime: Date.now(), type: "poison" },
   ]);
+  //   const [poisons, setPoisons] = useState([
+  //     { x: 5, y: -10, createTime: Date.now() },
+  //   ]);
+  const isObject = useCallback(
+    ({ x, y }) => objects.find((object) => object.x === x && object.y === y),
+    [objects]
+  );
+  const isObjectOfType = useCallback(
+    ({ x, y, type }) => {
+      const object = isObject({ x, y });
+      return object && object.type === type;
+    },
+    [isObject]
+  );
+
   const score = snake.length - 3;
 
   // console.log("snake", snake);
@@ -25,33 +41,34 @@ const useSnake = () => {
     setDirection(Direction.Right);
   }, []);
   // usecallback prevent initialization of  function on each re- render
-  const addNewFood = useCallback(() => {
-    let newFood = getRandomCell();
-    while (isSnake(newFood) || isFood(newFood)) {
-      newFood = getRandomCell();
-    }
+  const addNewObject = useCallback(
+    (type) => {
+      let newObject = getRandomCell();
+      while (isSnake(newObject) || isObject(newObject)) {
+        newObject = getRandomCell();
+      }
 
-    setFoods((CurrentFoods) => [...CurrentFoods, newFood]);
-    //  spread will hold all existing food then add current new food
-  }, [isFood, isSnake]);
+      newObject.type = type;
 
-  const addPoison = useCallback(() => {
-    let newPoison = getRandomCell();
-    while (isSnake(newPoison) || isPoison(newPoison)) {
-      newPoison = getRandomCell();
-    }
-
-    setPoisons((CurrentPoisons) => [...CurrentPoisons, newPoison]);
-  }, [isPoison, isSnake]);
-
-  const isFood = useCallback(
-    ({ x, y }) => foods.some((food) => food.x === x && food.y === y),
-    [foods]
+      setObjects((CurrentObjects) => [...CurrentObjects, newObject]);
+      //  spread will hold all existing food then add current new food
+    },
+    [isObject, isSnake]
   );
-  const isPoison = useCallback(
-    ({ x, y }) => poisons.some((poison) => poison.x === x && poison.y === y),
-    [poisons]
-  );
+
+  //   const addPoison = useCallback(() => {
+  //     let newPoison = getRandomCell();
+  //     while (isSnake(newPoison) || isPoison(newPoison)) {
+  //       newPoison = getRandomCell();
+  //     }
+
+  //     setPoisons((CurrentPoisons) => [...CurrentPoisons, newPoison]);
+  //   }, [isPoison, isSnake]);
+
+  //   const isPoison = useCallback(
+  //     ({ x, y }) => poisons.some((poison) => poison.x === x && poison.y === y),
+  //     [poisons]
+  //   );
 
   const isSnake = useCallback(
     ({ x, y }) =>
@@ -59,20 +76,22 @@ const useSnake = () => {
     [snake]
   );
 
-  const removeEachFood = useCallback(() => {
-    setFoods((currentFoods) =>
-      currentFoods.filter((food) =>
-        Math.floor(Date.now() - food.createTime <= 10 * 1000)
+  const removeObject = useCallback((type) => {
+    setObjects((CurrentObjects) =>
+      CurrentObjects.filter(
+        (object) =>
+          object.type !== type ||
+          Math.floor(Date.now() - object.createTime <= 10 * 1000)
       )
     );
   }, []);
-  const removePoison = useCallback(() => {
-    setPoisons((CurrentPoisons) =>
-      CurrentPoisons.filter((poison) =>
-        Math.floor(Date.now() - poison.createTime <= 5 * 1000)
-      )
-    );
-  }, []);
+  //   const removePoison = useCallback(() => {
+  //     setPoisons((CurrentPoisons) =>
+  //       CurrentPoisons.filter((poison) =>
+  //         Math.floor(Date.now() - poison.createTime <= 5 * 1000)
+  //       )
+  //     );
+  //   }, []);
 
   // move the snake
 
@@ -89,22 +108,22 @@ const useSnake = () => {
       const newSnake = [newHead, ...snake];
 
       // remove tail when head is not in the food
-      if (!isFood(newHead)) {
+      if (!isObjectOfType({ x: newHead.x, y: newHead.y, type: "food" })) {
         newSnake.pop();
       } else {
-        setFoods((currentFoods) =>
-          currentFoods.filter(
-            (food) => !(food.x === newHead.x && food.y === newHead.y)
+        setObjects((currentObject) =>
+          currentObject.filter(
+            (object) => !(object.x === newHead.x && object.y === newHead.y)
           )
         );
       }
-      if (isPoison(newHead)) {
-        setPoisons((CurrentPoisons) =>
-          CurrentPoisons.filter(
-            (poison) => !(poison.x === newHead.x && poison.y === newHead.y)
-          )
-        );
-      }
+      //   if (isPoison(newHead)) {
+      //     setPoisons((CurrentPoisons) =>
+      //       CurrentPoisons.filter(
+      //         (poison) => !(poison.x === newHead.x && poison.y === newHead.y)
+      //       )
+      //     );
+      //   }
 
       //  let gameHasBeenReset = false;
       //   foods.forEach(
@@ -128,7 +147,7 @@ const useSnake = () => {
       //     return;
       //   }
       // it will remove that food which is matched with the position of snake
-      if (isPoison(newHead)) {
+      if (isObjectOfType({ x: newHead.x, y: newHead.y, type: "poison" })) {
         resetGame();
       }
 
@@ -142,16 +161,16 @@ const useSnake = () => {
     // const timer = setInterval(runSingleStep, 1000);
 
     // return () => clearInterval(timer);
-  }, [direction, isFood, isSnake, isPoison, resetGame]);
+  }, [isObjectOfType, direction.x, direction.y, isSnake, resetGame]);
 
   useEffect(() => {
     const head = snake[0];
-    if (isFood(head)) {
+    if (isObject(head)) {
       // setScore((score) => {
       //   return score + 1;
       // });
 
-      addNewFood();
+      addNewObject("food");
     }
     //   let newFood = getRandomCell();
     //   while (isSnake(newFood)) {
@@ -159,7 +178,7 @@ const useSnake = () => {
     //   }
     //   setFoods(newFood)
     // }
-  }, [addNewFood, isFood, snake]);
+  }, [addNewObject, isObject, snake]);
   // difference between setinerval and set timeout ....and  array.find and some
 
   // useEffect(() => {
@@ -178,11 +197,13 @@ const useSnake = () => {
   //   return () => clearInterval(disappearFood);
   // }, []);
 
-  useInterval(addNewFood, 3 * 1000);
-  useInterval(removeEachFood, 100);
+  useInterval(() => addNewObject("food"), 3 * 1000);
+  useInterval(() => removeObject("food"), 100);
+  useInterval(() => addNewObject("poison"), 5 * 1000);
+  useInterval(() => removeObject("poison"), 200);
   useInterval(runSingleStep, 100);
-  useInterval(addPoison, 5 * 1000);
-  useInterval(removePoison, 100);
+  //   useInterval(addNewObject(CellType.BadFood), 3 * 1000);
+  //   useInterval(removeObject(CellType.BadFood), 100);
 
   useEffect(() => {
     const handleDirection = (direction, oppositeDirection) => {
@@ -244,27 +265,27 @@ const useSnake = () => {
       for (let y = 0; y < Config.height; y++) {
         let type = CellType.Empty,
           remaining = undefined;
-        if (isFood({ x, y })) {
+        if (isObjectOfType({ x, y, type: "food" })) {
           type = CellType.GoodFood;
           remaining =
             10 -
             Math.round(
               (Date.now() -
-                foods.find((food) => food.x === x && food.y === y).createTime) /
+                objects.find((object) => object.x === x && object.y === y)
+                  .createTime) /
                 1000
             );
         }
-
-        if (isPoison({ x, y })) {
-          (type = CellType.BadFood),
-            (remaining =
-              10 -
-              Math.round(
-                (Date.now() -
-                  poisons.find((poison) => poison.x === x && poison.y === y)
-                    .createTime) /
-                  1000
-              ));
+        if (isObjectOfType({ x, y, type: "poison" })) {
+          type = CellType.BadFood;
+          remaining =
+            10 -
+            Math.round(
+              (Date.now() -
+                objects.find((object) => object.x === x && object.y === y)
+                  .createTime) /
+                1000
+            );
         } else if (isSnake({ x, y })) {
           type = CellType.Snake;
         }
@@ -280,7 +301,7 @@ const useSnake = () => {
       }
     }
     return elements;
-  }, [poisons, foods, isFood, isPoison, isSnake]);
+  }, [objects, isObject, isSnake]);
   return {
     snake,
     score,
