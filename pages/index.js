@@ -124,20 +124,28 @@ const useSnake = () => {
     setPoisons([]);
   }, []);
 
-  const removeFoods = useCallback(() => {
-    // only keep those foods which were created within last 10s.
-    setFoods((currentFoods) =>
-      currentFoods.filter((food) => Date.now() - food.createdAt <= 10 * 1000)
-    );
-  }, []);
+  // const removeFoods = useCallback(() => {
+  //   // only keep those foods which were created within last 10s.
+  //   setFoods((currentFoods) =>
+  //     currentFoods.filter((food) => Date.now() - food.createdAt <= 10 * 1000)
+  //   );
+  // }, []);
 
-  const removePoisons = useCallback(() => {
-    setPoisons((currentPoisons) =>
+  // const removePoisons = useCallback(() => {
+  //   setPoisons((currentPoisons) =>
+  //     currentPoisons.filter(
+  //       (poison) => Date.now() - poison.createdAt <= 10 * 1000
+  //     )
+  //   );
+  // }, []);
+
+  const removeObject = useCallback((setState)=>{
+    setState((currentPoisons) =>
       currentPoisons.filter(
         (poison) => Date.now() - poison.createdAt <= 10 * 1000
       )
     );
-  }, []);
+  },[]);
 
   // ?. is called optional chaining
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
@@ -160,21 +168,29 @@ const useSnake = () => {
     (newCell) => isSnake(newCell) || isFood(newCell || isPoison(newCell)),
     [isFood, isPoison, isSnake]
   );
-  const addFood = useCallback(() => {
-    let newFood = getRandomCell();
-    while (isAllowedCell(newFood)) {
-      newFood = getRandomCell();
-    }
-    setFoods((currentFoods) => [...currentFoods, newFood]);
-  }, [isAllowedCell]);
 
-  const addPoison = useCallback(() => {
-    let newPoison = getRandomCell();
-    while (isAllowedCell(newPoison)) {
-      newPoison = getRandomCell();
+  const getEmptyCell = useCallback(() =>{
+    let newCell = getRandomCell();
+    while (isAllowedCell(newCell)) {
+      newCell = getRandomCell();
     }
-    setPoisons((currentPoisons) => [...currentPoisons, newPoison]);
-  }, [isAllowedCell]);
+    return newCell;
+  },[isAllowedCell]);
+
+  // const addFood = useCallback(() => {
+  //   const newFood = getEmptyCell();
+  //   setFoods((currentFoods) => [...currentFoods, newFood]);
+  // }, [getEmptyCell]);
+
+  // const addPoison = useCallback(() => {
+  //   const newPoison = getEmptyCell();
+  //   setPoisons((currentPoisons) => [...currentPoisons, newPoison]);
+  // }, [getEmptyCell]);
+
+  const addObject = useCallback((setState)=>{
+    const newObject = getEmptyCell();
+    setState((currentPoisons) => [...currentPoisons, newObject]);
+  },[getEmptyCell])
 
   // move the snake
   const runSingleStep = useCallback(() => {
@@ -213,12 +229,13 @@ const useSnake = () => {
       return newSnake;
     });
   }, [direction.x, direction.y, isFood, isPoison, isSnake, resetGame]);
+  
 
-  useInterval(runSingleStep, 1);
-  useInterval(addFood, 3000);
-  useInterval(removeFoods, 100);
-  useInterval(addPoison, 3000);
-  useInterval(removePoisons, 100);
+  useInterval(runSingleStep, 200);
+  useInterval(()=>addObject(setFoods), 3000);
+  useInterval(()=>removeObject(setFoods), 100);
+  useInterval(()=>addObject(setPoisons), 3000);
+  useInterval(()=>removeObject(setPoisons), 100);
 
   useEffect(() => {
     const handleDirection = (direction, oppositeDirection) => {
