@@ -73,10 +73,11 @@ const Cell = ({ x, y, type, remaining }) => {
   );
 };
 
-const getRandomCell = () => ({
+const getRandomCellOfType = (cellType) => ({
   x: Math.floor(Math.random() * Config.width),
   y: Math.floor(Math.random() * Config.width),
   createdAt: Date.now(),
+  type: cellType, 
 });
 
 const getInitialDirection = () => Direction.Right;
@@ -116,8 +117,8 @@ const useSnake = () => {
   const [snake, setSnake] = useState(getDefaultSnake());
   const [direction, setDirection] = useState(getInitialDirection());
 
-  const [foods, setFoods] = useState([]);
-  const [poisons, setPoisons] = useState([]);
+  // food, and poison are stored as objects
+  const [objects, setObjects] = useState([]);
 
   const defaultSnakeSize = 3
   const score = snake.length - defaultSnakeSize;
@@ -125,30 +126,17 @@ const useSnake = () => {
   // useCallback() prevents instantiation of a function on each rerender
   // based on the dependency array
 
-  // resets the snake ,foods, direction to initial values
-  const resetGame = useCallback(() => {
-    setFoods([]);
-    setDirection(getInitialDirection());
-    setPoisons([]);
-  }, []);
-
-  const removeObjects = useCallback( () => {
-    // only keep those foods and poisons which were created within last 10s.
-    setFoods((currentFoods) =>
-      currentFoods.filter((food) => Date.now() - food.createdAt <= 10 * 1000)
-    );
-
-    setPoisons((currentPoisons) => 
-      currentPoisons.filter((poison) => Date.now() - poison.createdAt <= 10 * 1000)
-    );
-  }, []);
-
   // ?. is called optional chaining
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining
   const isFood = useCallback(
-    ({ x, y }) => foods.some((food) => food.x === x && food.y === y),
-    [foods]
+    ({ x, y }) => objects.some((object) => object.x === x && object.y === y && object.type === CellType.Food),
+    [objects]
   );
+
+  const isPoison = useCallback(
+    ({ x, y }) => objects.some((object) => object.x === x && object.y === y && object.type === CellType.Poison),
+    [objects]
+  )
 
   const isSnake = useCallback(
     ({ x, y }) =>
@@ -156,30 +144,32 @@ const useSnake = () => {
     [snake]
   );
 
-  const isPoison = useCallback(
-    ({x, y}) => poisons.some((poison) => poison.x === x && poison.y === y),
-    [poisons]
-  )
-
   const isOccupied = useCallback((cell) => isSnake(cell) || isFood(cell) || isPoison(cell),
     [isFood, isPoison, isSnake]);
 
-  const addFood = useCallback(() => {
-    let newFood = getRandomCell();
-    while (isOccupied(newFood)) {
-      newFood = getRandomCell();
+
+  const addObject = useCallback((type) => {
+    // adds object of given type (food or poison)
+    let newObject = getRandomCellOfType(type);
+    while (isOccupied(newObject)) {
+      newObject = getRandomCellOfType(type);
     }
-    setFoods((currentFoods) => [...currentFoods, newFood]);
+    setObjects((currentObjects) => [...currentObjects, newObject]);
   }, [isOccupied]);
 
-  const addPoison = useCallback(() => {
-    // adds new poison after 5 second
-    let newPoison = getRandomCell();
-    while(isOccupied(newPoison)) {
-      newPoison = getRandomCell();
-    }
-    setPoisons((currentPoisons) => [...currentPoisons, newPoison]);
-  }, [isOccupied])
+  const removeObject = useCallback( () => {
+    // only keep those objects which were created within last 10s.
+    setObjects((currentObjects) =>
+    currentObjects.filter((object) => Date.now() - object.createdAt < 10 * 1000)
+    );
+  }, []);
+
+  const resetGame = useCallback(() => {
+    // resets the snake ,objects, and direction to initial values
+    setObjects([]);
+    setDirection(getInitialDirection());
+  }, []);
+
 
   // move the snake
   const runSingleStep = useCallback(() => {
@@ -203,16 +193,17 @@ const useSnake = () => {
         return getDefaultSnake();
       }
       
-      // decrease snake size if it hits poison when the snake is bigger than it's default size
+      // when the snake is bigger than it's default size, decrease snake size if it hits poison 
+      // otherwise, reset the game
       if (isPoison(newHead)) {
         if (newSnake.length - 1 <= defaultSnakeSize ) {
           resetGame();
           return getDefaultSnake();
         } else {
           newSnake.pop();
-          setPoisons((currentPoisons) => 
-          currentPoisons.filter(
-            (poison) => !(poison.x === newHead.x && poison.y === newHead.y)
+          setObjects((currentObjects) => 
+          currentObjects.filter(
+            (object) => !(object.x === newHead.x && object.y === newHead.y)
           ));
         }
       }
@@ -222,9 +213,9 @@ const useSnake = () => {
       if (!isFood(newHead)) {
         newSnake.pop();
       } else {
-        setFoods((currentFoods) =>
-          currentFoods.filter(
-            (food) => !(food.x === newHead.x && food.y === newHead.y)
+        setObjects((currentObjects) =>
+          currentObjects.filter(
+            (object) => !(object.x === newHead.x && object.y === newHead.y)
           )
         );
       }
@@ -234,9 +225,9 @@ const useSnake = () => {
   }, [direction, isFood, isSnake, isPoison, resetGame]);
 
   useInterval(runSingleStep, 200);
-  useInterval(addFood, 3000);
-  useInterval(addPoison, 5000);
-  useInterval(removeObjects, 100);
+  useInterval(() => addObject(CellType.Food), 3000);
+  useInterval(() => addObject(CellType.Poison), 5000);
+  useInterval(removeObject, 100);
 
 
   useEffect(() => {
@@ -283,7 +274,8 @@ const useSnake = () => {
           10 -
           Math.round(
             (Date.now() -
-              foods.find((food) => food.x === x && food.y === y).createdAt) /
+              // find the object on (x, y) co-ordinate to access it's 'createdAt' property
+              objects.find((object) => object.x === x && object.y === y).createdAt) /
               1000
           );
       } else if (isSnake({ x, y })) {
@@ -294,7 +286,7 @@ const useSnake = () => {
           10 - 
           Math.round(
             (Date.now() - 
-              poisons.find((poison) => poison.x === x && poison.y === y).createdAt) /
+              objects.find((object) => object.x === x && object.y === y).createdAt) /
               1000
           );
       }
