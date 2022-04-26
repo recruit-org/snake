@@ -1,4 +1,4 @@
-import { Config } from "./constants";
+import { Config, Direction } from "./constants";
 export const getRandomCell = () => ({
   x: Math.floor(Math.random() * Config.width),
   y: Math.floor(Math.random() * Config.width),
@@ -9,7 +9,9 @@ export const getDefaultSnake = () => [
   { x: 7, y: 12 },
   { x: 6, y: 12 },
 ];
-
+export const getInitialDirection = () => {
+  return Direction.Right;
+};
 //  let gameHasBeenReset = false;
 //   foods.forEach(
 //     // (food) => !(food.x == newHead.x && food.y === newHead.y)

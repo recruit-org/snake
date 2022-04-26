@@ -3,8 +3,8 @@ import dynamic from "next/dynamic";
 // import { useMemo } from "react/cjs/react.production.min";
 // import { useCallback } from "react/cjs/react.production.min";
 // import styles from "../styles/Snake.module.css";
-import Snake from "../src/components/Snake";
+import Game from "../src/components/Game";
 
-export default dynamic(() => Promise.resolve(Snake), {
+export default dynamic(() => Promise.resolve(Game), {
   ssr: false,
 });
