@@ -1,20 +1,23 @@
-import { useEffect, useContext, useCallback, useMemo } from "react";
+import { useEffect, useCallback, useMemo } from "react";
 import { Config, CellType, Direction } from "../constants";
-import {
-  getDefaultSnake,
-  getInitialDirection,
-  getRandomCell,
-} from "../helpers";
+import { getRandomCell } from "../helpers";
 import Cell from "../components/Cell";
 import { useInterval } from "./useInterval";
-import { GameContext } from "../context/game";
+import { GameState, useGameContext } from "../context/game";
 
 const useSnakeController = () => {
   // const grid = useRef();
-  const { snake, objects, setObjects, setDirection, setSnake, direction } =
-    useContext(GameContext);
+  const {
+    snake,
+    objects,
+    setObjects,
+    setSnake,
+    direction,
+    resetGame,
+    setState,
+  } = useGameContext();
 
-    console.log("direction", direction)
+  console.log("direction", direction);
 
   // snake[0] is head and snake[snake.length - 1] is tail
   // usecallback prevent initialization of  function on each re- render
@@ -32,12 +35,6 @@ const useSnakeController = () => {
   );
 
   // console.log("snake", snake);
-
-  const resetGame = useCallback(() => {
-    setSnake(getDefaultSnake());
-    setDirection(getInitialDirection());
-    // setObjects([]);
-  }, [setDirection, setSnake]);
 
   //   const isContained = useCallback(isObject(cells) || isSnake(cells), [
   //     isObject,
@@ -109,20 +106,20 @@ const useSnakeController = () => {
       }
 
       if (isSnake(newHead)) {
-        resetGame();
-        return getDefaultSnake();
+        setState(GameState.Finished);
       }
 
       return newSnake;
     });
   }, [
+    setSnake,
     direction.x,
     direction.y,
     isObjectOfType,
-    setSnake,
     isSnake,
     setObjects,
     resetGame,
+    setState,
   ]);
   return {
     objects,
@@ -142,7 +139,7 @@ const useSnakeController = () => {
 //   }, [addNewObject, isObject, snake]);
 //   // difference between setinerval and set timeout ....and  array.find and some
 export const usePlay = () => {
-  const { setDirection } = useContext(GameContext);
+  const { setDirection } = useGameContext();
   const { addNewObject, removeObject, runSingleStep } = useSnakeController();
 
   useInterval(() => addNewObject("food"), 3 * 1000);
